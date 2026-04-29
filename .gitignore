@@ -1,6 +1,49 @@
-.env
-.venv/
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-newsletter.db
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Environment variables
+.env
+.env.*
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/settings.json
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+cron.log
+
+# Temp files
+*.tmp
+*.bak
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# Type checker
+.pyright/
+
+# Prefect
+.prefect/
