@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oykos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oykos_dev}
+      POSTGRES_DB: oykos
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oykos"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: .
+    command: ["oykos", "serve", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://oykos:${POSTGRES_PASSWORD:-oykos_dev}@db:5432/oykos
+    depends_on:
+      db:
+        condition: service_healthy
+
+  pipeline:
+    build: .
+    command: ["oykos"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://oykos:${POSTGRES_PASSWORD:-oykos_dev}@db:5432/oykos
+    depends_on:
+      db:
+        condition: service_healthy
+    # Run daily at 06:00 UTC via cron on the host, or use:
+    #   docker compose run --rm pipeline
+    profiles:
+      - cron
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://oykos:${POSTGRES_PASSWORD:-oykos_dev}@db:5432/oykos
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - setup
+
+volumes:
+  pgdata:
