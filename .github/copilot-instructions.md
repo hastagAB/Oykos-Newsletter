@@ -7,13 +7,16 @@ Italian Pediatrics Newsletter Engine for PLS (Pediatricians of Free Choice). Det
 - Python 3.12+, strict typing everywhere
 - Pydantic v2 for all data models (strict mode)
 - SQLAlchemy 2.0 (async) + Alembic for database
-- PostgreSQL + pgvector (SQLite for local dev/tests)
+- PostgreSQL for production, SQLite for local dev/tests. No pgvector
 - OpenAI Responses API + Structured Outputs (GPT-5.4 primary, GPT-5 mini for triage)
 - httpx for HTTP (async, with timeouts)
-- feedparser for RSS/Atom
-- Prefect for orchestration
-- FastAPI + Jinja2 for review UI
-- SendGrid for email delivery
+- feedparser for RSS/Atom, BeautifulSoup for the controlled scraper
+- Orchestration is plain async functions in `src/oykos/pipeline/`, driven by the
+  CLI and cron. There is no workflow engine - do not add Prefect, Airflow or
+  Celery without an ADR
+- FastAPI + Jinja2 for the subscriber pages and review UI
+- SMTP via `smtplib` for email delivery (Zoho by default, any server works)
+- WordPress REST API for publishing each issue before the send
 - pytest + pytest-asyncio for testing
 - ruff for linting, pyright (strict) for type checking
 
@@ -32,10 +35,13 @@ Italian Pediatrics Newsletter Engine for PLS (Pediatricians of Free Choice). Det
 
 ## Before Writing Code
 - Search `src/oykos/` for existing utilities. Prefer extension over duplication
-- Read `STATE.md` and recent session logs before proposing code
+- Read `.vibe/STATE.md` and recent session logs before proposing code
 - Check `docs/data-model.md` before creating/modifying any Pydantic model
 - Check `docs/scoring.md` before touching scoring logic
 - Check `docs/sources.md` before adding/modifying source connectors
+- Check `docs/deviations.md` before proposing a feature that sounds like it is
+  in the PRD. Nine blueprint features were deliberately cut; `docs/PRD.md` and
+  `docs/strategy.md` describe intent, not the build
 
 ## Stop Directive
 If you are unsure whether a function, method, or API exists in a dependency, STOP and say "I'm not sure this API exists - please verify." Do not invent plausible-looking function signatures.
@@ -60,4 +66,8 @@ See `.vibe/STATE.md` for project state and `.vibe/backlog.md` for slice list.
 
 ## Formatting
 - Never use em-dashes or en-dashes - use hyphens instead
+- Italian copy MUST carry its accents: attività, perché, più, già, ciò, età,
+  priorità, affidabilità, né, è. The audience is Italian physicians and
+  unaccented Italian reads as misspelled. Subject headers are auto-encoded to
+  RFC 2047 and both MIME parts are utf-8, so accents are safe end to end.
 - Conventional commits: `feat(scope): description (spec: SXXX)`

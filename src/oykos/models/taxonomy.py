@@ -48,6 +48,31 @@ class Section(str, Enum):
     CME = "cme"
 
 
+class Penalty(str, Enum):
+    """Noise penalties from docs/scoring.md."""
+
+    DUPLICATE = "duplicate"
+    PAYWALL = "paywall"
+    PRESS_RELEASE = "press_release"
+    SINGLE_SOURCE = "single_source"
+
+
+class ExclusionReason(str, Enum):
+    """Why an item failed the selection gates (blueprint Section 3)."""
+
+    NO_PLS_RELEVANCE = "no_pls_relevance"
+    UNRELIABLE_SOURCE = "unreliable_source"
+    NOT_ACTIONABLE = "not_actionable"
+    GENERALIST_NEWS = "generalist_news"
+    PREPRINT = "preprint"
+    VENDOR_MARKETING = "vendor_marketing"
+
+
+class ReviewerRole(str, Enum):
+    MEDICAL_EDITOR = "medical_editor"
+    LEGAL_EDITOR = "legal_editor"
+
+
 class SourceType(str, Enum):
     RSS = "rss"
     SCRAPE = "scrape"
@@ -91,3 +116,6 @@ class TaxonomyTag(str, Enum):
     # Training
     CME_TRAINING = "cme_training"
     CONGRESSES = "congresses"
+    # Research and AI in pediatric practice
+    RESEARCH_EVIDENCE = "research_evidence"
+    AI_DIGITAL_HEALTH = "ai_digital_health"

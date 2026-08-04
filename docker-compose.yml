@@ -31,15 +31,43 @@ services:
 
   pipeline:
     build: .
-    command: ["oykos"]
+    command: ["oykos", "ingest"]
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://oykos:${POSTGRES_PASSWORD:-oykos_dev}@db:5432/oykos
     depends_on:
       db:
         condition: service_healthy
-    # Run daily at 06:00 UTC via cron on the host, or use:
+    # Daily ingestion, Mon-Fri. Schedule with cron on the host:
     #   docker compose run --rm pipeline
+    profiles:
+      - cron
+
+  compose-issue:
+    build: .
+    command: ["oykos", "compose"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://oykos:${POSTGRES_PASSWORD:-oykos_dev}@db:5432/oykos
+    depends_on:
+      db:
+        condition: service_healthy
+    # Weekly composition. The issue lands in the review queue at /review:
+    #   docker compose run --rm compose-issue
+    profiles:
+      - cron
+
+  send:
+    build: .
+    command: ["oykos", "send"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://oykos:${POSTGRES_PASSWORD:-oykos_dev}@db:5432/oykos
+    depends_on:
+      db:
+        condition: service_healthy
+    # Delivers issues an editor approved. Safe to run often:
+    #   docker compose run --rm send
     profiles:
       - cron
 

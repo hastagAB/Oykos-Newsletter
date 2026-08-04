@@ -1,11 +1,18 @@
 """SQLAlchemy ORM tables - S005."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+def _utcnow() -> datetime:
+    """Naive UTC. The database layer stores UTC without an offset so that
+    SQLite and PostgreSQL behave identically for range comparisons."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class Base(DeclarativeBase):
@@ -16,7 +23,7 @@ class NewsItemRow(Base):
     __tablename__ = "news_items"
 
     item_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    ingested_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    ingested_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     source_key: Mapped[str] = mapped_column(String(100), index=True)
     source_name: Mapped[str] = mapped_column(String(255))
     source_country: Mapped[str] = mapped_column(String(10))
@@ -32,33 +39,57 @@ class NewsItemRow(Base):
 
     # Classification
     geo: Mapped[str] = mapped_column(String(10), default="IT")
-    taxonomy_tags: Mapped[dict] = mapped_column(JSON, default=list)
+    taxonomy_tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     setting: Mapped[str] = mapped_column(String(20), default="territory")
     pls_relevance: Mapped[float] = mapped_column(Float, default=0.0)
     device_related: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Scoring
     score_total: Mapped[float] = mapped_column(Float, default=0.0)
-    subscores: Mapped[dict] = mapped_column(JSON, default=dict)
-    penalties: Mapped[dict] = mapped_column(JSON, default=list)
+    subscores: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    penalties: Mapped[list[str]] = mapped_column(JSON, default=list)
     transferability: Mapped[float] = mapped_column(Float, default=1.0)
 
     # Editorial
+    hook_question: Mapped[str] = mapped_column(Text, default="")
     headline_operational: Mapped[str] = mapped_column(Text, default="")
     why_it_matters: Mapped[str] = mapped_column(Text, default="")
-    what_to_do: Mapped[dict] = mapped_column(JSON, default=list)
+    what_to_do: Mapped[list[str]] = mapped_column(JSON, default=list)
     summary: Mapped[str] = mapped_column(Text, default="")
     confidence: Mapped[str] = mapped_column(String(10), default="low")
-    citations: Mapped[dict] = mapped_column(JSON, default=list)
-    key_passages: Mapped[dict] = mapped_column(JSON, default=list)
+    citations: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    key_passages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
 
     # Review
     needs_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
     review_status: Mapped[str] = mapped_column(String(20), default="pending")
     reviewer_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    review_reason: Mapped[str] = mapped_column(String(80), default="")
+
+    # Gating (3 selection gates)
+    gate_passed: Mapped[bool] = mapped_column(Boolean, default=False)
+    exclusions: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+    # Editorial verification
+    unsupported_claims: Mapped[list[str]] = mapped_column(JSON, default=list)
+    blocked: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Delivery tracking
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+
+
+class AlertRow(Base):
+    """Ledger of trigger alerts, used to enforce the monthly cap."""
+
+    __tablename__ = "alerts"
+
+    alert_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    item_id: Mapped[str] = mapped_column(String(36), index=True)
+    category: Mapped[str] = mapped_column(String(40))
+    level: Mapped[str] = mapped_column(String(20))
+    subject: Mapped[str] = mapped_column(Text, default="")
+    recipients: Mapped[int] = mapped_column(Integer, default=0)
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
 
 
 class NewsletterRow(Base):
@@ -66,14 +97,22 @@ class NewsletterRow(Base):
 
     issue_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     week: Mapped[str] = mapped_column(String(10), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     subject_line: Mapped[str] = mapped_column(Text, default="")
-    subject_variant: Mapped[str] = mapped_column(Text, default="")
+    preheader: Mapped[str] = mapped_column(Text, default="")
+    tldr: Mapped[list[str]] = mapped_column(JSON, default=list)
+    reading_time_minutes: Mapped[int] = mapped_column(Integer, default=0)
     html_content: Mapped[str] = mapped_column(Text, default="")
     text_content: Mapped[str] = mapped_column(Text, default="")
-    status: Mapped[str] = mapped_column(String(20), default="draft")
-    slots: Mapped[dict] = mapped_column(JSON, default=list)
-    metrics: Mapped[dict] = mapped_column(JSON, default=dict)
+    public_url: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default="draft", index=True)
+    slots: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    # Review workflow
+    review_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ReviewDecisionRow(Base):
@@ -84,9 +123,9 @@ class ReviewDecisionRow(Base):
     issue_id: Mapped[str] = mapped_column(String(36), index=True)
     reviewer_role: Mapped[str] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(20))
-    edits: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    edits: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    decided_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    decided_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
 
 class SubscriberRow(Base):
@@ -104,13 +143,11 @@ class SubscriberRow(Base):
     consented_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    # Referral tracking
-    referral_code: Mapped[str] = mapped_column(String(16), unique=True, index=True)
-    referred_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    referral_count: Mapped[int] = mapped_column(Integer, default=0)
-    # A/B group: "A" or "B"
-    ab_group: Mapped[str] = mapped_column(String(1), default="A")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Preferences: empty topic list means "everything"
+    topics: Mapped[list[str]] = mapped_column(JSON, default=list)
+    alert_opt_in: Mapped[bool] = mapped_column(Boolean, default=True)
+    region: Mapped[str] = mapped_column(String(40), default="")
 
 
 class FeedbackRow(Base):
@@ -122,4 +159,8 @@ class FeedbackRow(Base):
     subscriber_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     rating: Mapped[int] = mapped_column(Integer)  # 1-5
     comment: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Structured signals the blueprint asks for, beyond the star rating.
+    too_long: Mapped[bool] = mapped_column(Boolean, default=False)
+    too_many_devices: Mapped[bool] = mapped_column(Boolean, default=False)
+    not_relevant: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

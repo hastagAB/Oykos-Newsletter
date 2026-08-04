@@ -1,0 +1,110 @@
+{
+  "aifa_safety_communication": {
+    "source_key": "aifa_safety",
+    "source_name": "AIFA Safety Communications",
+    "country": "IT",
+    "reliability_tier": 5,
+    "title": "Comunicazione di sicurezza: richiamo di lotti di sciroppo pediatrico",
+    "canonical_url": "https://www.aifa.gov.it/comunicazioni-di-sicurezza/richiamo-lotti",
+    "document_type": "safety_communication",
+    "raw_text": "AIFA comunica il richiamo precauzionale di alcuni lotti di sciroppo pediatrico. I pediatri di libera scelta devono verificare le confezioni presenti in studio e non somministrare i lotti indicati. Non sono stati segnalati eventi avversi gravi. La comunicazione riguarda esclusivamente i lotti elencati in allegato.",
+    "taxonomy_tags": ["drug_safety"],
+    "geo": "IT",
+    "key_passages": [
+      "AIFA comunica il richiamo precauzionale di alcuni lotti di sciroppo pediatrico.",
+      "I pediatri di libera scelta devono verificare le confezioni presenti in studio e non somministrare i lotti indicati."
+    ]
+  },
+  "respivirnet_surveillance": {
+    "source_key": "respivirnet",
+    "source_name": "RespiVirNet (ISS)",
+    "country": "IT",
+    "reliability_tier": 5,
+    "title": "RespiVirNet: incidenza sindromi simil-influenzali in aumento nei bambini sotto i 5 anni",
+    "canonical_url": "https://www.salute.gov.it/respivirnet/bollettino-settimanale",
+    "document_type": "surveillance_report",
+    "raw_text": "Il bollettino settimanale RespiVirNet segnala un aumento dell'incidenza delle sindromi simil-influenzali. La fascia di età sotto i 5 anni resta la più colpita. Si raccomanda di rafforzare il triage telefonico e di rivedere i criteri di invio in pronto soccorso.",
+    "taxonomy_tags": ["surveillance", "respiratory"],
+    "geo": "IT",
+    "key_passages": [
+      "Il bollettino settimanale RespiVirNet segnala un aumento dell'incidenza delle sindromi simil-influenzali.",
+      "Si raccomanda di rafforzare il triage telefonico e di rivedere i criteri di invio in pronto soccorso."
+    ]
+  },
+  "sisac_acn_update": {
+    "source_key": "sisac_acn",
+    "source_name": "SISAC - ACN Publications",
+    "country": "IT",
+    "reliability_tier": 5,
+    "title": "ACN: nuove regole operative per la pediatria di libera scelta",
+    "canonical_url": "https://www.sisac.info/acn/aggiornamento-operativo",
+    "document_type": "legal_update",
+    "raw_text": "L'accordo collettivo nazionale introduce nuove regole operative per la pediatria di libera scelta. Cambiano i tempi di trasmissione della documentazione e gli obblighi di reperibilita. Le disposizioni si applicano a partire dal trimestre successivo alla pubblicazione.",
+    "taxonomy_tags": ["acn_agreements"],
+    "geo": "IT",
+    "key_passages": [
+      "L'accordo collettivo nazionale introduce nuove regole operative per la pediatria di libera scelta.",
+      "Cambiano i tempi di trasmissione della documentazione e gli obblighi di reperibilita."
+    ]
+  },
+  "poct_rapid_test": {
+    "source_key": "min_salute_ivdr",
+    "source_name": "Ministry - IVD Performance Studies",
+    "country": "IT",
+    "reliability_tier": 5,
+    "title": "Test rapido per streptococco: valutazione delle prestazioni in ambito ambulatoriale",
+    "canonical_url": "https://www.salute.gov.it/dispositivi-medici/test-rapido-streptococco",
+    "document_type": "guideline",
+    "raw_text": "La valutazione delle prestazioni del test rapido per streptococco in età pediatrica riporta una sensibilità dell'86% e una specificità del 95%. Il test non deve essere eseguito in assenza di criteri clinici suggestivi. L'esecuzione richiede circa cinque minuti e non necessità di centrifuga.",
+    "taxonomy_tags": ["rapid_tests", "poct_lab"],
+    "geo": "IT",
+    "device_related": true,
+    "tests_mentioned": ["strep_rapid"],
+    "key_passages": [
+      "La valutazione delle prestazioni del test rapido per streptococco in età pediatrica riporta una sensibilità dell'86% e una specificità del 95%.",
+      "Il test non deve essere eseguito in assenza di criteri clinici suggestivi."
+    ]
+  },
+  "ecdc_threat_report": {
+    "source_key": "ecdc_cdtr",
+    "source_name": "ECDC Weekly Threats Report",
+    "country": "EU",
+    "reliability_tier": 5,
+    "title": "ECDC: circolazione di morbillo in aumento in diversi paesi europei",
+    "canonical_url": "https://www.ecdc.europa.eu/weekly-threats/measles-update",
+    "document_type": "surveillance_report",
+    "raw_text": "ECDC segnala un aumento dei casi di morbillo in diversi paesi europei. La copertura vaccinale resta al di sotto della soglia raccomandata in varie aree. Si raccomanda di verificare lo stato vaccinale dei bambini durante i bilanci di salute.",
+    "taxonomy_tags": ["surveillance", "vaccinations"],
+    "geo": "EU",
+    "key_passages": [
+      "ECDC segnala un aumento dei casi di morbillo in diversi paesi europei.",
+      "Si raccomanda di verificare lo stato vaccinale dei bambini durante i bilanci di salute."
+    ]
+  },
+  "vendor_marketing_noise": {
+    "source_key": "uppa",
+    "source_name": "Portale divulgativo",
+    "country": "IT",
+    "reliability_tier": 1,
+    "title": "Comunicato stampa: l'azienda lancia sul mercato la nuova gamma di dispositivi",
+    "canonical_url": "https://vendor.example.com/comunicato-stampa",
+    "document_type": "news",
+    "raw_text": "L'azienda lancia sul mercato la nuova gamma di dispositivi per lo studio pediatrico. Il comunicato stampa non riporta dati di performance ne riferimenti a studi clinici.",
+    "taxonomy_tags": ["rapid_tests"],
+    "geo": "IT",
+    "key_passages": []
+  },
+  "generalist_filler": {
+    "source_key": "medico_bambino",
+    "source_name": "Rivista divulgativa",
+    "country": "IT",
+    "reliability_tier": 2,
+    "title": "Il ruolo del pediatra nella società contemporanea",
+    "canonical_url": "https://example.it/riflessione-generalista",
+    "document_type": "news",
+    "raw_text": "Una riflessione generale sul ruolo del pediatra. Nessuna raccomandazione operativa, nessun cambiamento di pratica clinica, nessun riferimento normativo.",
+    "taxonomy_tags": ["neuro_development"],
+    "geo": "IT",
+    "key_passages": []
+  }
+}

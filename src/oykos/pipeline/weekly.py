@@ -1,96 +1,343 @@
-"""Main weekly pipeline - ties all phases together."""
+"""Weekly pipeline - the composer run that actually ships an issue.
+
+Order matters and follows the blueprint end-to-end workflow (Section 7):
+candidates -> evidence snippets -> editorial synthesis -> verification ->
+Decision Cards -> composer with constraints -> subject/preheader -> render ->
+risk-based human review gate -> delivery.
+"""
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from oykos.alerts.pipeline import process_alerts
 from oykos.config import Settings
-from oykos.db.repository import NewsItemRepository, NewsletterRepository
-from oykos.ingestion.orchestrator import run_daily_ingestion
-from oykos.llm.classifier import classify_item
+from oykos.db.repository import (
+    NewsItemRepository,
+    NewsletterRepository,
+    ReviewDecisionRepository,
+)
+from oykos.db.subscribers import SubscriberRepository
+from oykos.delivery.email_sender import OutboundMessage, send_bulk, send_newsletter
+from oykos.delivery.wordpress import publish_issue
 from oykos.llm.client import LLMClient
+from oykos.llm.extraction import attach_key_passages
 from oykos.llm.synthesis import synthesize_editorial
-from oykos.llm.verification import verify_claims
+from oykos.llm.verification import cross_source_support, verify_claims
+from oykos.models.news_item import NewsItem, Newsletter
+from oykos.models.taxonomy import Confidence, IssueStatus
 from oykos.newsletter.composer import compose_newsletter
-from oykos.newsletter.subject import generate_subject_lines
+from oykos.newsletter.subject import generate_subject_line
 from oykos.newsletter.template import render_html, render_plain_text
 from oykos.observability.metrics import compute_quality_report
-from oykos.processing.scoring import score_item
+from oykos.processing.gates import filter_candidates
+from oykos.processing.ranker import rank_and_select
 
 logger = logging.getLogger(__name__)
 
-
-async def run_daily_pipeline(session: AsyncSession, settings: Settings) -> None:
-    """Run the daily ingestion + classification + scoring pipeline."""
-    logger.info("Starting daily pipeline")
-
-    # 1. Ingest
-    items = await run_daily_ingestion(session)
-    logger.info("Ingested %d items", len(items))
-
-    # 2. Classify + Score
-    client = LLMClient(settings)
-    repo = NewsItemRepository(session)
-
-    for item in items:
-        classification, subscores = await classify_item(item, client)
-        item.classification = classification
-        item.scoring.subscores = subscores
-        await repo.update_classification(str(item.item_id), classification)
-
-        scoring = score_item(item)
-        item.scoring = scoring
-        await repo.update_scoring(str(item.item_id), scoring)
-
-    await session.commit()
-
-    # 3. Check for alerts
-    await process_alerts(items, settings)
-
-    logger.info("Daily pipeline complete")
+MIN_NEWSLETTER_ITEMS = 5
+CANDIDATE_MIN_SCORE = 30.0
+BACKLOG_MIN_SCORE = 20.0
+# A couple of spares, so a verification block does not shorten the issue.
+EDITORIAL_HEADROOM = 3
 
 
-async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> None:
-    """Run the weekly newsletter composition pipeline."""
-    logger.info("Starting weekly pipeline")
-    client = LLMClient(settings)
-    repo = NewsItemRepository(session)
-    nl_repo = NewsletterRepository(session)
+def current_week() -> str:
+    return datetime.now(UTC).strftime("%G-W%V")
 
-    # 1. Get candidates
-    candidates = await repo.get_candidates(min_score=30.0, limit=50)
-    logger.info("Found %d candidates", len(candidates))
 
-    # 2. Generate editorial for top candidates
-    for item in candidates[:20]:
-        if not item.editorial.headline_operational:
+async def gather_candidates(repo: NewsItemRepository) -> list[NewsItem]:
+    """Fresh unsent candidates, topped up from the 7-28 day backlog if sparse."""
+    candidates = await repo.get_unsent_candidates(min_score=CANDIDATE_MIN_SCORE, limit=40)
+    logger.info("%d fresh unsent candidates (last 7 days)", len(candidates))
+
+    if len(candidates) >= MIN_NEWSLETTER_ITEMS:
+        return candidates
+
+    logger.info("Only %d fresh candidates - pulling backlog", len(candidates))
+    seen = {c.item_id for c in candidates}
+    for item in await repo.get_backlog(min_score=BACKLOG_MIN_SCORE, limit=20):
+        if item.item_id not in seen:
+            candidates.append(item)
+            seen.add(item.item_id)
+
+    logger.info("%d candidates after backlog top-up", len(candidates))
+    return candidates
+
+
+async def build_editorial(
+    candidates: list[NewsItem],
+    client: LLMClient,
+    repo: NewsItemRepository,
+) -> None:
+    """Extract evidence, synthesise and verify, in place.
+
+    Only called with items that already survived gating and ranking, so no LLM
+    budget is spent writing copy for items that will not ship.
+    """
+    pending = [c for c in candidates if not c.editorial.headline_operational]
+    corroborating = {c.source.key for c in candidates}
+
+    for index, item in enumerate(pending, start=1):
+        logger.info("[%d/%d] Editorial: %.70s", index, len(pending), item.content.title)
+        try:
+            await attach_key_passages(item, client)
+            await repo.update_key_passages(str(item.item_id), item.content.key_passages)
+
             editorial = await synthesize_editorial(item, client)
-            editorial = await verify_claims(editorial, item.content.raw_text, client)
-            item.editorial = editorial
-            await repo.update_editorial(str(item.item_id), editorial)
+            item.editorial = await verify_claims(editorial, item, client)
 
+            # Cross-source corroboration (AIFA <-> EMA, ISS <-> Ministry). A second
+            # institutional source covering the same ground restores confidence that
+            # single-source verification had to hold back.
+            if (
+                not item.editorial.blocked
+                and item.editorial.confidence is Confidence.MEDIUM
+                and cross_source_support(item, corroborating - {item.source.key})
+            ):
+                item.editorial.confidence = Confidence.HIGH
+
+            await repo.update_editorial(str(item.item_id), item.editorial)
+
+            if item.editorial.blocked:
+                logger.warning("Item blocked by verification: %.70s", item.content.title)
+        except Exception:
+            logger.exception("Editorial generation failed: %.70s", item.content.title)
+
+
+async def deliver(
+    newsletter: Newsletter,
+    settings: Settings,
+    session: AsyncSession,
+) -> bool:
+    """Send the issue to every confirmed subscriber."""
+    subscriber_repo = SubscriberRepository(session)
+    subscribers = await subscriber_repo.get_active_subscribers()
+
+    if not subscribers:
+        recipients = settings.recipient_list
+        if not recipients:
+            logger.error("No confirmed subscribers and no RECIPIENT_EMAILS configured")
+            return False
+        logger.info("Sending to %d legacy recipients", len(recipients))
+        return await send_newsletter(
+            settings=settings,
+            to_emails=recipients,
+            subject=newsletter.subject_line,
+            html_content=newsletter.html_content,
+            text_content=newsletter.text_content,
+        )
+
+    logger.info("Sending to %d subscribers", len(subscribers))
+
+    # One rendered message per subscriber, so each gets their own unsubscribe
+    # and preferences link. Sent over a shared, throttled connection.
+    messages: list[OutboundMessage] = []
+    for subscriber in subscribers:
+        unsubscribe_url = (
+            f"{settings.base_url.rstrip('/')}/unsubscribe/{subscriber.unsubscribe_token}"
+        )
+        preferences_url = settings.preferences_url_for(subscriber.unsubscribe_token)
+        messages.append(
+            OutboundMessage(
+                to_email=subscriber.email,
+                subject=newsletter.subject_line,
+                html_content=render_html(
+                    newsletter,
+                    settings.newsletter_title,
+                    unsubscribe_url=unsubscribe_url,
+                    preferences_url=preferences_url,
+                    archive_url=settings.archive_url,
+                    cta_url=settings.cta_url,
+                    logo_url=settings.logo_url,
+                ),
+                text_content=render_plain_text(
+                    newsletter,
+                    settings.newsletter_title,
+                    unsubscribe_url=unsubscribe_url,
+                    preferences_url=preferences_url,
+                    cta_url=settings.cta_url,
+                ),
+                list_unsubscribe_url=unsubscribe_url,
+            ),
+        )
+
+    delivered = await send_bulk(settings, messages)
+    logger.info("Delivered %d/%d", delivered, len(subscribers))
+    return delivered > 0
+
+
+async def deliver_and_finalize(
+    newsletter: Newsletter,
+    settings: Settings,
+    session: AsyncSession,
+) -> bool:
+    """Deliver the issue, then publish it and mark everything sent.
+
+    Shared by the scheduled run and the "send now" button in the review UI, so
+    both paths finalise identically.
+    """
+    newsletter_repo = NewsletterRepository(session)
+
+    # Publish first so the email can carry a working "Leggi online" link.
+    public_url = await publish_issue(settings, newsletter)
+    if public_url:
+        newsletter.public_url = public_url
+        await newsletter_repo.update_public_url(str(newsletter.issue_id), public_url)
+
+    if not await deliver(newsletter, settings, session):
+        return False
+
+    await NewsItemRepository(session).mark_items_sent(
+        [str(slot.item_id) for slot in newsletter.slots],
+    )
+    await newsletter_repo.update_status(str(newsletter.issue_id), IssueStatus.SENT)
+    newsletter.status = IssueStatus.SENT
+    logger.info("Issue %s sent, %d items marked", newsletter.week, len(newsletter.slots))
+    return True
+
+
+async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> Newsletter | None:
+    """Compose, review-gate and deliver the weekly issue."""
+    week = current_week()
+    logger.info("=== Weekly pipeline: %s ===", week)
+
+    client = LLMClient(settings)
+    repo = NewsItemRepository(session)
+    newsletter_repo = NewsletterRepository(session)
+
+    candidates = await gather_candidates(repo)
+    if not candidates:
+        logger.error("No candidates available - cannot build an issue")
+        return None
+
+    # Gate and rank BEFORE writing any copy: synthesis is the expensive call, so
+    # it only runs on items that have already earned a slot.
+    shortlist = [
+        item
+        for item, _ in rank_and_select(
+            filter_candidates(candidates),
+            max_total=settings.max_newsletter_items + EDITORIAL_HEADROOM,
+            max_italy=settings.max_italy_slots + EDITORIAL_HEADROOM,
+            max_foreign=settings.max_foreign_slots + EDITORIAL_HEADROOM,
+        )
+    ]
+    logger.info("%d candidates shortlisted for editorial", len(shortlist))
+
+    await build_editorial(shortlist, client, repo)
     await session.commit()
 
-    # 3. Compose newsletter
-    week = datetime.utcnow().strftime("%G-W%V")
-    newsletter = compose_newsletter(candidates, week, settings.newsletter_title)
+    newsletter = compose_newsletter(
+        shortlist,
+        week,
+        settings.newsletter_title,
+        max_total=settings.max_newsletter_items,
+        max_italy=settings.max_italy_slots,
+        max_foreign=settings.max_foreign_slots,
+    )
+    if not newsletter.slots:
+        logger.error("Newsletter has 0 slots after gating - nothing to send")
+        return None
 
-    # 4. Subject lines
-    subject_a, subject_b = await generate_subject_lines(newsletter, client)
-    newsletter.subject_line = subject_a
-    newsletter.subject_variant = subject_b
+    newsletter.subject_line, newsletter.preheader = await generate_subject_line(
+        newsletter, client,
+    )
 
-    # 5. Render
-    newsletter.html_content = render_html(newsletter, settings.newsletter_title)
-    newsletter.text_content = render_plain_text(newsletter, settings.newsletter_title)
+    newsletter.html_content = render_html(
+        newsletter,
+        settings.newsletter_title,
+        unsubscribe_url=f"{settings.base_url.rstrip('/')}/unsubscribe/preview",
+        preferences_url=settings.preferences_url,
+        archive_url=settings.archive_url,
+        cta_url=settings.cta_url,
+        logo_url=settings.logo_url,
+    )
+    newsletter.text_content = render_plain_text(
+        newsletter,
+        settings.newsletter_title,
+        preferences_url=settings.preferences_url,
+        cta_url=settings.cta_url,
+    )
 
-    # 6. Persist
-    await nl_repo.save(newsletter)
+    report = compute_quality_report(shortlist, newsletter)
+    for issue in report.issues:
+        logger.warning("Quality issue: %s", issue)
+
+    # Risk-based human review gate: high-risk items must be signed off first.
+    awaiting = [
+        slot for slot in newsletter.slots
+        if slot.editorial.review.needs_human_review
+        and slot.editorial.review.review_status != "approved"
+    ]
+    if settings.preview_mode or awaiting:
+        newsletter.status = IssueStatus.IN_REVIEW
+        await newsletter_repo.save(newsletter)
+        await session.commit()
+        logger.info(
+            "Issue %s held for review: %d item(s) need sign-off. Review at %s/review/%s",
+            week, len(awaiting), settings.base_url.rstrip("/"), week,
+        )
+        return newsletter
+
+    newsletter.status = IssueStatus.APPROVED
+    await newsletter_repo.save(newsletter)
     await session.commit()
 
-    # 7. Quality report
-    report = compute_quality_report(candidates, newsletter)
-    logger.info("Weekly pipeline complete: %s", week)
+    if not await deliver_and_finalize(newsletter, settings, session):
+        logger.error("Delivery failed - items NOT marked as sent")
+    await session.commit()
+    return newsletter
+
+
+async def send_approved_issues(session: AsyncSession, settings: Settings) -> list[Newsletter]:
+    """Deliver every issue an editor has approved but that has not gone out yet.
+
+    Also honours ``AUTO_SEND_AFTER_HOURS``: when set, an issue that has been
+    waiting in review longer than the SLA ships with only the items that either
+    were approved or never needed review. Items still awaiting sign-off are
+    dropped rather than sent unreviewed. When the setting is 0 (the default) an
+    issue waits for a human indefinitely.
+    """
+    newsletter_repo = NewsletterRepository(session)
+    decisions_repo = ReviewDecisionRepository(session)
+    sent: list[Newsletter] = []
+
+    for newsletter in await newsletter_repo.list_by_status(IssueStatus.APPROVED):
+        if await deliver_and_finalize(newsletter, settings, session):
+            sent.append(newsletter)
+
+    if settings.auto_send_after_hours > 0:
+        deadline = datetime.now(UTC) - timedelta(hours=settings.auto_send_after_hours)
+        for newsletter in await newsletter_repo.list_by_status(IssueStatus.IN_REVIEW):
+            created = newsletter.created_at
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=UTC)
+            if created > deadline:
+                continue
+
+            decided = await decisions_repo.latest_by_item(str(newsletter.issue_id))
+            newsletter.slots = [
+                slot for slot in newsletter.slots
+                if not slot.editorial.review.needs_human_review
+                or str(slot.item_id) in decided
+            ]
+            if len(newsletter.slots) < MIN_NEWSLETTER_ITEMS:
+                logger.warning(
+                    "Issue %s passed the review SLA but only %d items are cleared - holding",
+                    newsletter.week, len(newsletter.slots),
+                )
+                continue
+
+            for position, slot in enumerate(newsletter.slots, start=1):
+                slot.position = position
+            await newsletter_repo.update_slots(str(newsletter.issue_id), newsletter.slots)
+            logger.warning(
+                "Issue %s auto-sent after the %dh review SLA with %d cleared items",
+                newsletter.week, settings.auto_send_after_hours, len(newsletter.slots),
+            )
+            if await deliver_and_finalize(newsletter, settings, session):
+                sent.append(newsletter)
+
+    await session.commit()
+    return sent

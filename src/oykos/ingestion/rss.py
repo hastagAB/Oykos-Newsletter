@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
+from time import mktime
+from typing import Any
 
 import feedparser
 import httpx
@@ -56,16 +58,16 @@ async def fetch_rss(source: Source, client: httpx.AsyncClient | None = None) -> 
     return items
 
 
-def _parse_date(entry: dict) -> datetime | None:
-    """Parse published date from a feed entry."""
+def _parse_date(entry: dict[str, Any]) -> datetime | None:
+    """Parse the published date from a feed entry as an aware UTC datetime."""
     for field in ("published_parsed", "updated_parsed"):
         parsed = entry.get(field)
-        if parsed:
-            try:
-                from time import mktime
-                return datetime.fromtimestamp(mktime(parsed))
-            except (TypeError, ValueError, OverflowError):
-                continue
+        if not parsed:
+            continue
+        try:
+            return datetime.fromtimestamp(mktime(parsed), tz=UTC)
+        except (TypeError, ValueError, OverflowError):
+            continue
     return None
 
 

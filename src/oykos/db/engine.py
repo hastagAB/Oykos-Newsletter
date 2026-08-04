@@ -1,18 +1,19 @@
 """Database engine and session management - S005."""
 from __future__ import annotations
 
-from sqlalchemy import MetaData
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-metadata = MetaData()
+from oykos.db.tables import Base
+
+__all__ = ["Base", "create_tables", "get_engine", "get_session_factory"]
 
 
-class Base(DeclarativeBase):
-    metadata = metadata
-
-
-def get_engine(database_url: str):  # noqa: ANN201
+def get_engine(database_url: str) -> AsyncEngine:
     return create_async_engine(database_url, echo=False)
 
 
@@ -22,7 +23,10 @@ def get_session_factory(database_url: str) -> async_sessionmaker[AsyncSession]:
 
 
 async def create_tables(database_url: str) -> None:
+    """Create every table declared on the ORM metadata."""
     engine = get_engine(database_url)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    await engine.dispose()
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    finally:
+        await engine.dispose()

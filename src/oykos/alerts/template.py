@@ -1,7 +1,7 @@
 """Alert email template - S033."""
 from __future__ import annotations
 
-from jinja2 import Environment, BaseLoader
+from jinja2 import BaseLoader, Environment
 
 from oykos.alerts.triggers import AlertLevel
 from oykos.models.news_item import EditorialBlock
@@ -49,7 +49,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     {% endif %}
   </div>
   <div class="footer">
-    <p>Questo alert e stato generato automaticamente da Oykos Newsletter Engine.</p>
+    <p>Questo alert è stato generato automaticamente da Oykos Newsletter Engine.</p>
   </div>
 </div>
 </body>

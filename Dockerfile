@@ -9,9 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python deps
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 COPY src/ src/
-RUN pip install --no-cache-dir ".[prod]"
+RUN pip install --no-cache-dir .
 
 # Copy remaining project files
 COPY alembic.ini ./
@@ -21,5 +21,8 @@ COPY migrations/ migrations/
 RUN useradd --create-home oykos
 USER oykos
 
-# Default: run the pipeline
-CMD ["oykos"]
+EXPOSE 8080
+
+# Web server by default. The pipeline runs as a scheduled `oykos ingest` /
+# `oykos compose` / `oykos send` against the same image.
+CMD ["oykos", "serve", "--host", "0.0.0.0", "--port", "8080"]

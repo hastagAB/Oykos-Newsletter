@@ -1,6 +1,11 @@
 # Source Registry Reference
 
-This document defines the complete source whitelist. Code in `src/oykos/sources.py` must match.
+This document defines the complete source whitelist. Code in
+`src/oykos/models/source.py` must match - 50 sources across 4 tiers.
+
+Run `oykos check-sources` to fetch every enabled source concurrently and see
+which ones are still returning items. Feed URLs rot and scraper selectors drift;
+that command is how you find out before an issue comes up short.
 
 ---
 
@@ -12,10 +17,13 @@ This document defines the complete source whitelist. Code in `src/oykos/sources.
 | `respivirnet` | RespiVirNet (ISS) | scrape | https://www.salute.gov.it/new/it/tema/influenza/sistema-di-sorveglianza-respivirnet/ | 5 |
 | `min_salute_fsn` | Ministry - Device Safety (FSN) | scrape | https://www.salute.gov.it/new/it/avvisi/avvisi-di-sicurezza-sui-dispositivi-medici/ | 5 |
 | `min_salute_dm_db` | Ministry - Device Database | scrape | https://www.salute.gov.it/new/it/banche-dati/banca-dati-nazionale-dei-dispositivi-medici/ | 5 |
+| `min_salute_segnalazioni` | Ministry - Device Incident Reporting | scrape | https://www.salute.gov.it/new/it/tema/dispositivi-medici/sistema-di-segnalazione-i-dispositivi-medici/ | 5 |
+| `min_salute_ivdr` | Ministry - IVD Performance Studies (IVDR) | scrape | https://www.salute.gov.it/new/it/tema/dispositivi-medici/studi-delle-prestazioni-dei-dispositivi-medico-diagnostici-vitro/ | 5 |
 | `iss_epicentro` | ISS/EpiCentro Influenza | scrape | https://www.epicentro.iss.it/influenza/bollettini | 5 |
 | `iss_abr` | ISS - Antibiotic Resistance | scrape | https://www.epicentro.iss.it/antibiotico-resistenza/documentazione-italia | 5 |
 | `aifa_safety` | AIFA Safety Communications | scrape | https://www.aifa.gov.it/comunicazioni-di-sicurezza | 5 |
 | `sisac_acn` | SISAC - ACN Publications | scrape | https://www.sisac.info/ | 5 |
+| `garante_privacy` | Garante Privacy | scrape | https://www.garanteprivacy.it/ | 5 |
 | `sip` | SIP (Societa Italiana di Pediatria) | rss | https://sip.it/feed/ | 4 |
 | `sip_guidelines` | SIP Guidelines | scrape | https://sip.it/sezione/formazione-e-aggiornamento/linee-guida/ | 4 |
 | `fimp` | FIMP Nazionale | rss | https://www.fimp.pro/feed/ | 4 |
@@ -23,11 +31,21 @@ This document defines the complete source whitelist. Code in `src/oykos/sources.
 | `fimp_calendar` | FIMP Event Calendar | scrape | https://www.fimp.pro/eventi/calendario-eventi | 4 |
 | `sicupp` | SICuPP Guidelines Commentate | scrape | https://sicupp.org/category/linee-guida-commentate/ | 4 |
 | `sipps` | SIPPS | scrape | https://www.sipps.it/ | 4 |
-| `agenas_ecm` | Agenas ECM Events | api | https://ape.agenas.it/Tools/Eventi.aspx | 4 |
-| `ecm_portal` | ECM Commission Portal | scrape | https://ecm.agenas.it/ | 4 |
-| `garante_privacy` | Garante Privacy | scrape | https://www.garanteprivacy.it/ | 5 |
-| `choosing_wisely_it` | Choosing Wisely Italy | scrape | https://choosingwiselyitaly.org/progetto/ | 4 |
 | `sin_neonatologia` | SIN (Neonatologia) | rss | https://www.neonatologia.it/feed/ | 4 |
+| `agenas_ecm` | Agenas ECM Events | scrape | https://ape.agenas.it/Tools/Eventi.aspx | 4 |
+| `ecm_portal` | ECM Commission Portal | scrape | https://ecm.agenas.it/ | 4 |
+| `agenas_hta` | Agenas - HTA Medical Devices | scrape | https://www.agenas.gov.it/ | 4 |
+| `choosing_wisely_it` | Choosing Wisely Italy | scrape | https://choosingwiselyitaly.org/progetto/ | 4 |
+
+### Tier 1 - Italian regional
+
+Operational changes that affect affiliated PLS in those regions.
+
+| Key | Name | Type | URL | Reliability |
+|-----|------|------|-----|-------------|
+| `regione_lombardia` | Regione Lombardia - Sanita | scrape | https://www.regione.lombardia.it/wps/portal/istituzionale/HP/servizi-e-informazioni/cittadini/salute-e-prevenzione | 4 |
+| `regione_veneto` | Regione Veneto - Sanita | scrape | https://www.regione.veneto.it/web/sanita | 4 |
+| `regione_umbria` | Regione Umbria - Salute | scrape | https://www.regione.umbria.it/salute | 4 |
 
 ## Tier 2 - European (High Transferability)
 
@@ -52,8 +70,32 @@ This document defines the complete source whitelist. Code in `src/oykos/sources.
 | `bmc_ped` | BMC Pediatrics | rss | https://bmcpediatr.biomedcentral.com/articles/most-recent/rss.xml | 3 |
 | `ped_research` | Pediatric Research | rss | https://www.nature.com/pr.rss | 3 |
 | `who` | WHO Publications | scrape | https://www.who.int/ | 5 |
+| `nice_guidance` | NICE Guidance | scrape | https://www.nice.org.uk/guidance/published?ndt=Guidance | 3 |
 
-## Radar (Secondary - Triangulation Only)
+### Tier 3 - High-impact research and AI in clinical practice
+
+Added to cover the evidence and digital-health material a PLS otherwise only
+meets second-hand. All three are RSS and were verified returning entries.
+
+| Key | Name | Type | URL | Reliability | Category hint |
+|-----|------|------|-----|-------------|---------------|
+| `nature_medicine` | Nature Medicine | rss | https://www.nature.com/nm.rss | 3 | `research_evidence` |
+| `npj_digital_medicine` | npj Digital Medicine | rss | https://www.nature.com/npjdigitalmed.rss | 3 | `ai_digital_health` |
+| `lancet_digital_health` | Lancet Digital Health | rss | https://www.thelancet.com/rssfeed/landig_current.xml | 3 | `ai_digital_health` |
+
+These are backed by two taxonomy tags added at the same time:
+`TaxonomyTag.RESEARCH_EVIDENCE` and `TaxonomyTag.AI_DIGITAL_HEALTH`. Items
+tagged `ai_digital_health` route to the Device/Test section.
+
+Being Tier 3 with reliability 3, they still have to clear all three selection
+gates and carry the foreign transferability discount, so they compete for the
+four foreign slots rather than displacing Italian institutional material.
+
+## Radar tier (Secondary - Triangulation Only)
+
+A **source tier**, not a newsletter section. Low reliability means these items
+usually fail the reliability gate; they are useful for corroborating a story
+that a stronger source also carries.
 
 | Key | Name | Type | URL | Reliability |
 |-----|------|------|-----|-------------|
@@ -68,9 +110,34 @@ This document defines the complete source whitelist. Code in `src/oykos/sources.
 
 ## Fetch Config Defaults
 
-| Source Type | Timeout | Max Items | Rate Limit |
-|-------------|---------|-----------|------------|
-| RSS/Atom | 30s | 20 per feed | 1 req/source/run |
-| Scrape | 45s | 10 per page | 1 req/2s (polite) |
-| API | 30s | 50 per query | Per API limits |
-| PDF | 60s | 5 per source | 1 req/5s |
+| Source Type | Timeout | Max Items |
+|-------------|---------|-----------|
+| RSS/Atom | 30s | 20 per feed |
+| Scrape | 45s | 10 per page |
+| ECM listings | 45s | 15 per page |
+
+Set per source via `FetchConfig` in `src/oykos/models/source.py`, which also
+carries the optional scraper hints (`link_selector`, `content_selector`,
+`url_must_contain`).
+
+`SourceType.PDF` exists in the enum but no source uses it: there is no PDF
+connector. See [deviations.md](deviations.md).
+
+## Health checks
+
+```bash
+oykos check-sources
+```
+
+Fetches every **enabled** source, 5 at a time, with a 45s timeout each, and
+prints one line per source:
+
+```
+OK   aifa_safety              scrape  8 items
+DEAD frontiers_ped            rss     0 items
+
+48/50 sources returned items.
+```
+
+Exits non-zero only when nothing at all came back. Sources are sorted with the
+failures first.

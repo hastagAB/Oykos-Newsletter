@@ -1,15 +1,14 @@
 """Tests for database repository - S005."""
 from __future__ import annotations
 
-from datetime import datetime
-from uuid import uuid4
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from oykos.db.tables import Base, NewsItemRow
 from oykos.db.repository import NewsItemRepository, NewsletterRepository
+from oykos.db.tables import Base
 from oykos.models.news_item import (
     Classification,
     ContentBlock,
@@ -25,7 +24,6 @@ from oykos.models.taxonomy import (
     DocumentType,
     Geo,
     IssueStatus,
-    Section,
     Setting,
     TaxonomyTag,
 )
@@ -54,7 +52,7 @@ def _make_item(url: str = "https://example.com/article-1") -> NewsItem:
         content=ContentBlock(
             title="Test AIFA Safety Alert",
             canonical_url=url,
-            published_at=datetime(2026, 4, 1),
+            published_at=datetime(2026, 4, 1, tzinfo=UTC),
             document_type=DocumentType.SAFETY_COMMUNICATION,
         ),
         classification=Classification(

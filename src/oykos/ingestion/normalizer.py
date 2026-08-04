@@ -9,10 +9,8 @@ from bs4 import BeautifulSoup
 
 
 def normalize_url(url: str) -> str:
-    """Canonical URL: strip fragment, trailing slash, lowercase scheme+host."""
-    url = urldefrag(url).url
-    url = url.rstrip("/")
-    return url
+    """Canonical URL: strip fragment and trailing slash."""
+    return urldefrag(url).url.rstrip("/")
 
 
 def clean_html(raw: str) -> str:

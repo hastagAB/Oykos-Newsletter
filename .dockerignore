@@ -1,0 +1,30 @@
+# Secrets must never enter the build context.
+.env
+.env.*
+!.env.example
+
+# Local state
+*.db
+*.db-journal
+_scratch.db
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Not needed at runtime
+tests/
+docs/
+scripts/
+specs/
+.vibe/
+.git/
+.github/
+docker-compose.yml
+
+# pyproject declares README.md as the package readme, so the build needs it.
+*.md
+!README.md

@@ -1,0 +1,44 @@
+# Fly.io deployment for the Oykos newsletter engine.
+#
+# The web service (subscribe, preferences, archive, review workbench) runs
+# continuously. The pipeline is NOT part of this service - it runs as scheduled
+# Fly Machines against the same image. See docs/deploy.md.
+#
+# Change `app` to a name that is free, then:  fly launch --no-deploy --copy-config
+
+app = "oykos-newsletter"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # SQLite lives on the mounted volume so it survives machine restarts.
+  DATABASE_URL = "sqlite+aiosqlite:////data/oykos.db"
+  LOG_LEVEL = "INFO"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Never scale to zero: subscribe confirmations and the review UI must answer
+  # immediately, and a cold start would drop them.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/"
+
+[mounts]
+  source = "oykos_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  # 512mb OOM-killed the ingest: it parses 200+ pages with BeautifulSoup while
+  # the web server is resident.
+  memory = "2gb"
