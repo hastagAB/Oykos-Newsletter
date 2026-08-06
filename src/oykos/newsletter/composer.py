@@ -141,6 +141,7 @@ def compose_newsletter(
                 source_name=item.source.name,
                 source_url=item.content.canonical_url,
                 evidence_quote=_pull_quote(item),
+                access_limited=item.content.access_limited,
                 source_links=_source_links(item),
             ),
         )

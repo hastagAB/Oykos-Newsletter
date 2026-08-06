@@ -36,6 +36,7 @@ class NewsItemRow(Base):
     document_type: Mapped[str] = mapped_column(String(50), default="news")
     language: Mapped[str] = mapped_column(String(10), default="it")
     raw_text: Mapped[str] = mapped_column(Text, default="")
+    access_limited: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Classification
     geo: Mapped[str] = mapped_column(String(10), default="IT")

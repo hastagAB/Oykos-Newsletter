@@ -40,6 +40,10 @@ class ContentBlock(BaseModel):
     raw_text: str = ""
     canonical_url: str
     key_passages: list[KeyPassage] = Field(default_factory=list)
+    # The body we could read is a login wall. The publication is still worth
+    # reporting, but no clinical conclusion may be drawn from it and the reader
+    # must be told before following the link.
+    access_limited: bool = False
 
 
 class Classification(BaseModel):
@@ -134,6 +138,8 @@ class NewsletterSlot(BaseModel):
     # A short verbatim quote from the source, shown with attribution. Quoting the
     # source is defensible; republishing its imagery is not.
     evidence_quote: str = ""
+    # Warn the reader before they follow a link into a members area.
+    access_limited: bool = False
     source_links: list[SourceLink] = Field(default_factory=list)
 
 

@@ -310,6 +310,7 @@ async def fetch_html(client: httpx.AsyncClient, url: str) -> str:
 class _Detail(NamedTuple):
     text: str
     published_at: datetime | None
+    access_limited: bool
 
 
 async def _fetch_detail(
@@ -323,17 +324,15 @@ async def _fetch_detail(
             html = await fetch_html(client, url)
         except httpx.HTTPError:
             logger.warning("Detail fetch failed for %s", url)
-            return _Detail("", None)
+            return _Detail("", None, False)
         if not html:
-            return _Detail("", None)
+            return _Detail("", None, False)
 
         text = extract_article_text(html, source)
-        # Never link a reader to something they cannot open, and never draw a
-        # conclusion from a login wall.
-        if is_paywalled(text):
-            logger.info("Skipping %s: members-only or login wall", url)
-            return _Detail("", None)
-        return _Detail(text, extract_published_at(html, url))
+        walled = is_paywalled(text)
+        if walled:
+            logger.info("Members-only, will be reported as a document notice: %s", url)
+        return _Detail(text, extract_published_at(html, url), walled)
 
 
 async def fetch_scrape(source: Source, client: httpx.AsyncClient | None = None) -> list[NewsItem]:
@@ -384,6 +383,7 @@ async def fetch_scrape(source: Source, client: httpx.AsyncClient | None = None) 
                     published_at=detail.published_at,
                     language="it" if source.country == "IT" else "en",
                     raw_text=detail.text,
+                    access_limited=detail.access_limited,
                 ),
             )
             for (url, title), detail in zip(links, details, strict=True)

@@ -237,6 +237,10 @@ a.plain, a.plain:visited { text-decoration: none; }
                 </td>
                 {% if slot.source_url %}
                 <td valign="middle" align="right" class="stack stack-gap" style="padding:12px 0 0;">
+                  {% if slot.access_limited %}
+                  <span class="sans" style="font-size:10.5px;letter-spacing:0.6px;color:#B45309;font-weight:700;">ACCESSO RISERVATO AI SOCI</span>
+                  <span style="color:#C3C9D2;">&nbsp;&middot;&nbsp;</span>
+                  {% endif %}
                   <a href="{{ slot.source_url }}" target="_blank" rel="noopener noreferrer" class="sans plain" style="font-size:12px;font-weight:700;color:#008484;text-decoration:none;white-space:nowrap;">
                     Consulta il testo integrale &rarr;
                   </a>
@@ -430,6 +434,8 @@ def render_plain_text(
 
         if ed.source_note:
             lines.append(f"   {ed.source_note}")
+        if slot.access_limited:
+            lines.append("   [Accesso riservato ai soci]")
         lines.append("")
 
     lines.extend(["", "-" * 60, CTA_TITLE, CTA_SUBTITLE, cta_url, "", DISCLAIMER])

@@ -67,6 +67,7 @@ class NewsItemRepository:
             document_type=item.content.document_type.value,
             language=item.content.language,
             raw_text=item.content.raw_text,
+            access_limited=item.content.access_limited,
             geo=item.classification.geo.value,
             taxonomy_tags=[t.value for t in item.classification.taxonomy_tags],
             setting=item.classification.setting.value,
@@ -265,6 +266,7 @@ class NewsItemRepository:
                 document_type=DocumentType(row.document_type),
                 language=row.language,
                 raw_text=row.raw_text,
+                access_limited=row.access_limited,
                 key_passages=[KeyPassage(**p) for p in (row.key_passages or [])],
             ),
             classification=Classification(

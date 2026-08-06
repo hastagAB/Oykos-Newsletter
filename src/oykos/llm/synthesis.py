@@ -55,6 +55,12 @@ Rules:
   in supporting_passage_ref (for example "P2").
 - Keep separate what the source states and what you infer. Never attribute a
   recommendation to a source whose full text you have not read.
+- If ACCESS LIMITED is true this is a document notice, not a clinical
+  recommendation. Say plainly that the full text is reserved to members, draw
+  NO clinical conclusion from it, and make the single action about consulting
+  the document if the reader has access, otherwise keeping current practice
+  until a complete source is available. The headline must not imply a change
+  in practice.
 - Never write a therapeutic protocol unless the source is a national guideline
   or consensus document."""
 
@@ -94,6 +100,7 @@ URL: {item.content.canonical_url}
 Document type: {item.content.document_type.value}
 Classification: {', '.join(t.value for t in item.classification.taxonomy_tags) or 'n/a'}
 Score: {item.scoring.score_total}/100
+ACCESS LIMITED: {item.content.access_limited}
 
 EVIDENCE (quote these, do not invent):
 {_format_evidence(item)}"""

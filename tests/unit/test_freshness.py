@@ -108,8 +108,8 @@ def test_login_walls_are_recognised(text: str) -> None:
 
 
 @pytest.mark.asyncio
-async def test_members_only_articles_are_dropped_not_reported() -> None:
-    """We never link a reader to something they cannot open."""
+async def test_members_only_articles_are_kept_but_flagged() -> None:
+    """SICuPP commentary is worth reporting; the restriction travels with it."""
     listing = '<main><a href="/riservato">Documento riservato ai soci SICuPP</a></main>'
     wall = (
         "<html><body><main>L'accesso a questo contenuto è riservato "
@@ -137,7 +137,40 @@ async def test_members_only_articles_are_dropped_not_reported() -> None:
     async with httpx.AsyncClient(transport=transport, follow_redirects=True) as client:
         items = await fetch_scrape(source, client)
 
-    assert items == []
+    assert len(items) == 1
+    assert items[0].content.access_limited
+
+
+@pytest.mark.asyncio
+async def test_open_articles_are_not_flagged() -> None:
+    listing = '<main><a href="/aperto">Raccomandazioni sulla bronchiolite nel lattante</a></main>'
+    article = (
+        "<html><body><main>La saturimetria domiciliare non è raccomandata di "
+        "routine nel lattante con bronchiolite lieve.</main></body></html>"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = listing if request.url.path == "/" else article
+        return httpx.Response(200, html=body)
+
+    source = Source(
+        key="test",
+        name="Test",
+        url="https://esempio.it/",
+        source_type=SourceType.SCRAPE,
+        tier=Tier.TIER_1_ITALY,
+        reliability=4,
+        country="IT",
+        category_hints=[],
+        fetch_config=FetchConfig(),
+    )
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, follow_redirects=True) as client:
+        items = await fetch_scrape(source, client)
+
+    assert len(items) == 1
+    assert not items[0].content.access_limited
 
 
 def test_real_articles_are_not_mistaken_for_login_walls() -> None:
