@@ -11,6 +11,7 @@ It writes ``preview.html`` and opens it in the default browser.
 from __future__ import annotations
 
 import webbrowser
+from datetime import UTC, datetime
 from pathlib import Path
 
 from oykos.models.news_item import (
@@ -29,34 +30,22 @@ from oykos.newsletter.composer import compose_newsletter
 from oykos.newsletter.template import render_html, render_plain_text
 
 WEEK = "2026-W32"
+# Only items published in the issue week ship, so the samples carry that date.
+PUBLISHED = datetime.fromisocalendar(2026, 32, 3).replace(tzinfo=UTC)
 OUTPUT = Path("preview.html")
 
-# Hook questions, keyed by topic. The real pipeline has the LLM write these.
-HOOKS: dict[TaxonomyTag, str] = {
-    TaxonomyTag.DRUG_SAFETY: "Sai quali lotti di amoxicillina hai oggi in armadio?",
-    TaxonomyTag.VACCINATIONS: (
-        "I richiami esavalenti che hai gi\u00e0 fissato per l'autunno reggono la nuova finestra?"
-    ),
-    TaxonomyTag.RESPIRATORY: (
-        "Ai genitori dei lattanti con bronchiolite consigli ancora il saturimetro a casa?"
-    ),
-    TaxonomyTag.ACN_AGREEMENTS: (
-        "Hai verificato se il tuo studio ha i requisiti per la nuova indennit\u00e0?"
-    ),
-    TaxonomyTag.RAPID_TESTS: (
-        "Sotto i 3 anni, quante volte esegui il test rapido per streptococco?"
-    ),
-    TaxonomyTag.DRUG_AUTHORIZATION: (
-        "Hai un'alternativa pronta per i pazienti allergici agli eccipienti?"
-    ),
-    TaxonomyTag.SURVEILLANCE: "Da quante settimane di tosse sospetti la pertosse?",
-    TaxonomyTag.PRIVACY: (
-        "Il gruppo di messaggistica con i genitori del tuo studio ha una base giuridica?"
-    ),
-    TaxonomyTag.AI_DIGITAL_HEALTH: (
-        "Quanto tempo dedichi alla raccolta anamnestica prima di ogni visita?"
-    ),
-    TaxonomyTag.CME_TRAINING: "Ti mancano crediti ECM da chiudere entro l'anno?",
+# What kind of source each item is, and what it does not let us conclude.
+SOURCE_NOTES: dict[TaxonomyTag, str] = {
+    TaxonomyTag.DRUG_SAFETY: "Fonte primaria. Comunicazione istituzionale AIFA.",
+    TaxonomyTag.VACCINATIONS: "Fonte primaria. Circolare ministeriale.",
+    TaxonomyTag.RESPIRATORY: "Società scientifica. Raccomandazione nazionale.",
+    TaxonomyTag.ACN_AGREEMENTS: "Fonte istituzionale. Testo integrale non accessibile.",
+    TaxonomyTag.RAPID_TESTS: "Documento associativo. Raccomandazione di appropriatezza.",
+    TaxonomyTag.DRUG_AUTHORIZATION: "Fonte primaria. Comunicazione EMA.",
+    TaxonomyTag.SURVEILLANCE: "Fonte istituzionale. Bollettino di sorveglianza.",
+    TaxonomyTag.PRIVACY: "Fonte primaria. Provvedimento del Garante.",
+    TaxonomyTag.AI_DIGITAL_HEALTH: "Fonte secondaria. Studio prospettico, non linea guida.",
+    TaxonomyTag.CME_TRAINING: "Fonte istituzionale. Segnalazione di evento formativo.",
 }
 
 # (title, source, geo, tag, headline, why it matters, actions, score)
@@ -171,6 +160,7 @@ def _build_items() -> list[NewsItem]:
                 content=ContentBlock(
                     title=title,
                     canonical_url=f"https://esempio.it/{tag.value}",
+                    published_at=PUBLISHED,
                     raw_text=why,
                     document_type=DocumentType.GUIDELINE,
                     key_passages=[
@@ -194,10 +184,10 @@ def _build_items() -> list[NewsItem]:
                     ),
                 ),
                 editorial=EditorialBlock(
-                    hook_question=HOOKS.get(tag, ""),
+                    source_note=SOURCE_NOTES.get(tag, ""),
                     headline_operational=headline,
                     why_it_matters=why,
-                    what_to_do=actions,
+                    what_to_do=actions[:1],
                     summary=why,
                     confidence=Confidence.HIGH,
                     citations=[

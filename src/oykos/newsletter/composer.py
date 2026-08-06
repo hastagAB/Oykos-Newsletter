@@ -20,6 +20,7 @@ from oykos.models.news_item import (
 from oykos.models.taxonomy import Geo, IssueStatus, ReviewerRole
 from oykos.processing.gates import filter_candidates
 from oykos.processing.ranker import MAX_FOREIGN, MAX_ITALY, MAX_TOTAL, rank_and_select
+from oykos.processing.recency import filter_to_week
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,16 @@ def compose_newsletter(
 
     # Gate 1/2/3 plus exclusion criteria.
     eligible = filter_candidates(publishable)
+
+    # Recency outranks filling the layout: only this week's publications ship,
+    # and an undated source cannot be verified so it cannot be included.
+    before_recency = len(eligible)
+    eligible = filter_to_week(eligible, week)
+    if before_recency != len(eligible):
+        logger.info(
+            "Recency filter kept %d of %d candidates for %s",
+            len(eligible), before_recency, week,
+        )
 
     # An item without a headline and actions has no 5-block template to render.
     eligible = [

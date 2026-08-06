@@ -40,6 +40,9 @@ class ContentBlock(BaseModel):
     raw_text: str = ""
     canonical_url: str
     key_passages: list[KeyPassage] = Field(default_factory=list)
+    # True when the body we could read is a login wall. The item may still be
+    # worth reporting, but no clinical recommendation may be drawn from it.
+    access_limited: bool = False
 
 
 class Classification(BaseModel):
@@ -94,11 +97,13 @@ class ReviewStatus(BaseModel):
 
 
 class EditorialBlock(BaseModel):
-    hook_question: str = ""
     headline_operational: str = ""
     why_it_matters: str = ""
     what_to_do: list[str] = Field(default_factory=list)
     summary: str = ""
+    # What kind of source this is and what it does not let us conclude. Shown to
+    # the reader in place of a bare confidence grade.
+    source_note: str = ""
     confidence: Confidence = Confidence.LOW
     citations: list[Citation] = Field(default_factory=list)
     review: ReviewStatus = Field(default_factory=ReviewStatus)

@@ -5,6 +5,8 @@ LLM and SMTP boundaries stubbed out.
 """
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -64,6 +66,7 @@ def _candidate(index: int, tags: list[TaxonomyTag], *, geo: Geo = Geo.IT) -> New
         content=ContentBlock(
             title=f"Articolo {index}",
             canonical_url=f"https://sip.it/{index}",
+            published_at=datetime.now(UTC),
             raw_text="Testo integrale del documento.",
             document_type=DocumentType.GUIDELINE,
             key_passages=[KeyPassage(quote="Testo integrale del documento.")],

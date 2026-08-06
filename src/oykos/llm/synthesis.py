@@ -17,42 +17,48 @@ from oykos.models.taxonomy import Confidence
 logger = logging.getLogger(__name__)
 
 HEADLINE_MAX_CHARS = 90
-HOOK_MAX_CHARS = 120
-MIN_ACTIONS = 2
-MAX_ACTIONS = 4
+SOURCE_NOTE_MAX_CHARS = 140
+MAX_ACTIONS = 1
 MAX_FALLBACK_SUMMARY_CHARS = 500
 
-SYNTHESIS_SYSTEM = f"""You are a senior Italian pediatrician writing an operational
-briefing for colleagues in primary care (Pediatri di Libera Scelta).
+SYNTHESIS_SYSTEM = f"""You are the clinical curator of an Italian pediatric
+newsletter, writing for Pediatri di Libera Scelta. You have already read and
+assessed the source; return only what is useful.
 
-Every item must answer three questions in 20-40 seconds of reading:
-what happened, why it matters for a PLS, what changes tomorrow morning in the studio.
+Voice: a very well prepared colleague. Competent, collegial, operational, sober.
+Never put the reader under scrutiny. Never manufacture urgency or curiosity.
 
-Style rules:
-- Write in Italian, with correct accents (attivita is wrong, attivita\u0300 is right:
-  always write perche\u0301, piu\u0300, gia\u0300, cio\u0300, eta\u0300, e\u0300).
-- hook_question: one question, maximum {HOOK_MAX_CHARS} characters, addressed to the
-  reader as "tu", that makes a PLS check their own practice against this item.
-  For example "Le prescrizioni e gli invii dei tuoi pazienti con epilessia sono in
-  linea con le nuove raccomandazioni nazionali?" or "Di quali strumenti di
-  diagnostica di primo livello e\u0300 dotato il tuo studio?". It must be answerable
-  by the reader from their own practice, never rhetorical or generic. Ask about
-  the reader's own patients, studio or prescribing, never about the document.
-- headline_operational: action-oriented, maximum {HEADLINE_MAX_CHARS} characters.
-- why_it_matters: exactly one sentence on the clinical or operational impact.
-  Lead with the consequence for the reader's practice, not with who published it.
-- what_to_do: {MIN_ACTIONS} to {MAX_ACTIONS} concrete micro-actions (check, avoid,
-  adopt, explain to parents). Each one must name what to do to whom and when.
-  "Valutare la letteratura" is useless; "Rivedere i criteri di invio in PS per la
-  bronchiolite sotto i 3 mesi" is useful.
-- summary: 3 to 6 lines of clinical/operational detail. Prefer specifics - ages,
-  doses, dates, thresholds, numbers - over adjectives. No filler openers such as
-  "Recentemente" or "E\u0300 importante sottolineare che".
-- Ground every claim in the numbered EVIDENCE passages you are given. Cite the
-  passage number in supporting_passage_ref (for example "P2").
-- Never state a fact the passages do not support. If the evidence is thin, say so
-  and set confidence to low.
-- Do not write therapeutic protocols unless the source is a national guideline
+Every item answers: what changed, why it matters in practice, what to do now.
+
+Rules:
+- Write in Italian with correct accents: perche', piu', gia', cio', eta', e'
+  must be written perch\u00e9, pi\u00f9, gi\u00e0, ci\u00f2, et\u00e0, \u00e8.
+- headline_operational: a CONCLUDING title, max {HEADLINE_MAX_CHARS} characters, that
+  already carries the consequence. Do not merely announce that a document exists.
+  Good: "Attacco acuto d'asma: per ora non cambiare la pratica".
+  Bad: "SICuPP pubblica un aggiornamento sull'asma".
+- why_it_matters: one or two sentences on why this touches a PLS's practice.
+  Open with the consequence, not the background, not with who published it.
+  Write "In pratica, questo significa..." rather than "Per il PLS conta perche'...".
+- what_to_do: EXACTLY ONE priority action, proportionate to how solid and how
+  accessible the source is. Use concrete verbs - consultare, confrontare,
+  ricontrollare, mantenere - always naming what must be checked.
+  Never audit the reader. Write "Ricontrolla questi due aspetti della gestione",
+  never "Verifica se le tue pratiche sono allineate".
+- summary: 2 to 5 lines giving what the reader needs to decide whether to go
+  deeper. Specifics over adjectives: ages, doses, dates, thresholds. No filler
+  openers. Do not restate the headline or why_it_matters in other words.
+- source_note: max {SOURCE_NOTE_MAX_CHARS} characters naming what kind of source this is and
+  what it does NOT let you conclude, for example "Documento istituzionale. Testo
+  integrale non accessibile." Never write a bare reliability grade.
+- Ground every claim in the numbered EVIDENCE passages. Cite the passage number
+  in supporting_passage_ref (for example "P2").
+- Keep separate what the source states and what you infer. Never attribute a
+  recommendation to a source whose full text you have not read.
+- If ACCESS LIMITED is true this is a document report, not a clinical
+  recommendation: say plainly that the full text is not accessible, draw no
+  clinical conclusion, and make the action about obtaining or awaiting the text.
+- Never write a therapeutic protocol unless the source is a national guideline
   or consensus document."""
 
 
@@ -63,11 +69,11 @@ class SynthesisCitation(BaseModel):
 
 
 class SynthesisResponse(BaseModel):
-    hook_question: str
     headline_operational: str
     why_it_matters: str
     what_to_do: list[str] = Field(default_factory=list)
     summary: str
+    source_note: str = ""
     confidence: str = "medium"
     citations: list[SynthesisCitation] = Field(default_factory=list)
 
@@ -91,6 +97,7 @@ URL: {item.content.canonical_url}
 Document type: {item.content.document_type.value}
 Classification: {', '.join(t.value for t in item.classification.taxonomy_tags) or 'n/a'}
 Score: {item.scoring.score_total}/100
+ACCESS LIMITED: {item.content.access_limited}
 
 EVIDENCE (quote these, do not invent):
 {_format_evidence(item)}"""
@@ -131,11 +138,11 @@ EVIDENCE (quote these, do not invent):
     ]
 
     return EditorialBlock(
-        hook_question=resp.hook_question.strip()[:HOOK_MAX_CHARS],
         headline_operational=resp.headline_operational.strip()[:HEADLINE_MAX_CHARS],
         why_it_matters=resp.why_it_matters.strip(),
         what_to_do=[a.strip() for a in resp.what_to_do if a.strip()][:MAX_ACTIONS],
         summary=resp.summary.strip(),
+        source_note=resp.source_note.strip()[:SOURCE_NOTE_MAX_CHARS],
         confidence=confidence,
         citations=citations,
     )

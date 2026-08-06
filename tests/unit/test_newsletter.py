@@ -6,6 +6,7 @@ template that the reader actually sees.
 from __future__ import annotations
 
 from collections import Counter
+from datetime import UTC, datetime
 
 from oykos.models.news_item import (
     Citation,
@@ -35,6 +36,8 @@ from oykos.newsletter.template import (
 from oykos.processing.ranker import MAX_ITALY, MAX_PER_SOURCE, MAX_TOTAL, SECTION_QUOTAS
 
 WEEK = "2026-W17"
+# Every item must be published inside the issue week, so fixtures carry a date.
+IN_WEEK = datetime.fromisocalendar(2026, 17, 3).replace(tzinfo=UTC)
 
 
 def _make_item(
@@ -63,6 +66,7 @@ def _make_item(
         content=ContentBlock(
             title="Titolo",
             canonical_url=f"https://esempio.it/{tags[0].value}-{score}",
+            published_at=IN_WEEK,
             raw_text="Testo di riferimento.",
             document_type=DocumentType.GUIDELINE,
         ),
@@ -206,10 +210,20 @@ def test_html_renders_the_five_blocks() -> None:
 
     assert "Verificare i lotti interessati" in html          # 1 headline
     assert "Riduce il rischio clinico" in html                # 2 why it matters
-    assert "Cosa fare / cosa evitare" in html                 # 3 do/avoid
+    assert "Cosa fare ora" in html                            # 3 the single action
     assert "Dettaglio clinico e operativo" in html            # 4 detail
     assert "Fonti" in html                                    # 5 sources
-    assert "Affidabilità HIGH" in html                        # confidence badge
+
+
+def test_source_note_replaces_the_bare_reliability_grade() -> None:
+    """Guidelines: never show a bare grade, state the source type and its limit."""
+    item = _make_item(tags=[TaxonomyTag.RESPIRATORY], score=90)
+    item.editorial.source_note = "Documento istituzionale. Testo integrale non accessibile."
+
+    html = render_html(compose_newsletter([item], WEEK))
+
+    assert "Documento istituzionale" in html
+    assert "Affidabilità" not in html
 
 
 def test_html_includes_header_furniture_and_disclaimer() -> None:

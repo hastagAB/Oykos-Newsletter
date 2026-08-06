@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 from urllib.parse import urljoin, urlparse
 
@@ -40,12 +40,29 @@ _HTML_CONTENT_TYPES = ("text/html", "application/xhtml+xml", "text/plain", "")
 # Most CMSs put the publication date in the permalink. Without this a 2016
 # archive page looks exactly as fresh as today's news.
 _URL_DATE = re.compile(r"/(20[0-2]\d)/(\d{1,2})(?:/(\d{1,2}))?/")
+_JSONLD_DATE = re.compile(r'"datePublished"\s*:\s*"([^"]+)"', re.I)
 _META_DATE = re.compile(
-    r"""<meta[^>]+(?:property|name)=["'](?:article:published_time|datePublished|"""
-    r"""date|DC.date.issued)["'][^>]+content=["']([^"']+)["']""",
+    r"""<meta[^>]+(?:property|name)=["'](?:article:published_time|og:published_time|"""
+    r"""datePublished|pubdate|sailthru\.date|parsely-pub-date|date|"""
+    r"""DC\.date\.issued|DC\.Date|dcterms\.created)["'][^>]+content=["']([^"']+)["']""",
     re.I,
 )
 _TIME_TAG = re.compile(r"""<time[^>]+datetime=["']([^"']+)["']""", re.I)
+
+# Half our Italian sources print the date only in prose.
+_IT_MONTHS = {
+    "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4, "maggio": 5, "giugno": 6,
+    "luglio": 7, "agosto": 8, "settembre": 9, "ottobre": 10, "novembre": 11,
+    "dicembre": 12,
+}
+_IT_TEXT_DATE = re.compile(
+    rf"\b(\d{{1,2}})\s+({'|'.join(_IT_MONTHS)})\s+(20\d{{2}})\b",
+    re.I,
+)
+_IT_NUMERIC_DATE = re.compile(r"\b(\d{1,2})[/.-](\d{1,2})[/.-](20\d{2})\b")
+
+# Sanity bound for anything parsed out of free text.
+EARLIEST_PLAUSIBLE_YEAR = 2000
 
 # Phrases that mean the reader cannot actually read what we would link them to.
 _PAYWALL_MARKERS = (
@@ -67,28 +84,75 @@ def is_paywalled(text: str) -> bool:
     return any(marker in lowered for marker in _PAYWALL_MARKERS)
 
 
+def _as_utc(raw: str) -> datetime | None:
+    """Parse an ISO-ish timestamp, tolerating the variants publishers emit."""
+    cleaned = raw.strip().replace("Z", "+00:00")
+    for candidate in (cleaned, cleaned[:19], cleaned[:10]):
+        try:
+            parsed = datetime.fromisoformat(candidate)
+        except ValueError:
+            continue
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+    return None
+
+
+def _plausible(moment: datetime | None) -> datetime | None:
+    """Reject dates that cannot be a publication date for this issue."""
+    if moment is None:
+        return None
+    now = datetime.now(UTC)
+    if moment > now + timedelta(days=1) or moment.year < EARLIEST_PLAUSIBLE_YEAR:
+        return None
+    return moment
+
+
 def extract_published_at(html: str, url: str) -> datetime | None:
-    """Best-effort publication date, from the permalink or the page metadata."""
+    """Best-effort publication date, most trustworthy signal first.
+
+    Half our sources put no ISO date in the markup but do print one in Italian
+    prose, so the cascade ends with text formats. Those are the least reliable,
+    hence last and bounded by a plausibility check.
+    """
     match = _URL_DATE.search(url)
     if match:
         year, month, day = match.group(1), match.group(2), match.group(3) or "1"
         try:
-            return datetime(int(year), int(month), int(day), tzinfo=UTC)
+            found = _plausible(datetime(int(year), int(month), int(day), tzinfo=UTC))
         except ValueError:
-            pass
+            found = None
+        if found:
+            return found
 
-    for pattern in (_META_DATE, _TIME_TAG):
-        found = pattern.search(html)
-        if not found:
-            continue
-        raw = found.group(1).strip().replace("Z", "+00:00")
+    for pattern in (_JSONLD_DATE, _META_DATE, _TIME_TAG):
+        for raw in pattern.findall(html):
+            found = _plausible(_as_utc(raw))
+            if found:
+                return found
+
+    text_match = _IT_TEXT_DATE.search(html)
+    if text_match:
+        day, month_name, year = text_match.groups()
+        month = _IT_MONTHS[month_name.lower()]
         try:
-            parsed = datetime.fromisoformat(raw)
+            found = _plausible(datetime(int(year), month, int(day), tzinfo=UTC))
         except ValueError:
-            continue
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+            found = None
+        if found:
+            return found
+
+    numeric_match = _IT_NUMERIC_DATE.search(html)
+    if numeric_match:
+        # Italian convention is day first.
+        day, month, year = numeric_match.groups()
+        try:
+            found = _plausible(datetime(int(year), int(month), int(day), tzinfo=UTC))
+        except ValueError:
+            found = None
+        if found:
+            return found
 
     return None
+
 
 # Paths that are navigation rather than content.
 _SKIP_URL_MARKERS = (
@@ -246,6 +310,7 @@ async def fetch_html(client: httpx.AsyncClient, url: str) -> str:
 class _Detail(NamedTuple):
     text: str
     published_at: datetime | None
+    access_limited: bool
 
 
 async def _fetch_detail(
@@ -259,15 +324,14 @@ async def _fetch_detail(
             html = await fetch_html(client, url)
         except httpx.HTTPError:
             logger.warning("Detail fetch failed for %s", url)
-            return _Detail("", None)
+            return _Detail("", None, False)
         if not html:
-            return _Detail("", None)
+            return _Detail("", None, False)
 
         text = extract_article_text(html, source)
-        if is_paywalled(text):
-            logger.info("Skipping %s: members-only or login wall", url)
-            return _Detail("", None)
-        return _Detail(text, extract_published_at(html, url))
+        # A login wall is still a reportable publication, but nothing clinical
+        # may be concluded from it, so the flag travels with the item.
+        return _Detail(text, extract_published_at(html, url), is_paywalled(text))
 
 
 async def fetch_scrape(source: Source, client: httpx.AsyncClient | None = None) -> list[NewsItem]:
@@ -318,6 +382,7 @@ async def fetch_scrape(source: Source, client: httpx.AsyncClient | None = None) 
                     published_at=detail.published_at,
                     language="it" if source.country == "IT" else "en",
                     raw_text=detail.text,
+                    access_limited=detail.access_limited,
                 ),
             )
             for (url, title), detail in zip(links, details, strict=True)

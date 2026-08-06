@@ -1,8 +1,9 @@
 """Candidate ranker with composition constraints.
 
-5 slots, because a PLS reads this between patients: Top 2 + Clinical 2 +
-Regulatory 1 + Device 1 + CME 1 as ceilings, a 70/30 Italy/foreign split, and
-at most 2 items from any single source so one society cannot dominate an issue.
+Up to 5 slots, but no section minimums: the editorial guidelines forbid
+stretching content to fill a fixed layout, so an issue is as long as the week
+was. Ceilings still apply, plus a 70/30 Italy/foreign split and at most 2 items
+from any single source so one society cannot dominate an issue.
 """
 from __future__ import annotations
 
@@ -27,9 +28,9 @@ class SectionQuota:
 
 
 SECTION_QUOTAS: dict[Section, SectionQuota] = {
-    Section.TOP_PRIORITY: SectionQuota(minimum=1, maximum=2),
-    Section.CLINICAL: SectionQuota(minimum=1, maximum=2),
-    Section.REGULATORY: SectionQuota(minimum=1, maximum=1),
+    Section.TOP_PRIORITY: SectionQuota(minimum=0, maximum=2),
+    Section.CLINICAL: SectionQuota(minimum=0, maximum=2),
+    Section.REGULATORY: SectionQuota(minimum=0, maximum=1),
     Section.DEVICE: SectionQuota(minimum=0, maximum=1),
     Section.CME: SectionQuota(minimum=0, maximum=1),
 }

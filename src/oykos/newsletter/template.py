@@ -168,11 +168,6 @@ a.plain, a.plain:visited { text-decoration: none; }
             {{ "%02d"|format(slot.position) }}
           </td>
           <td valign="top">
-            {% if slot.editorial.hook_question %}
-            <p class="sans" style="margin:0 0 8px;font-size:13.5px;line-height:1.5;font-weight:700;color:#008484;">
-              {{ slot.editorial.hook_question }}
-            </p>
-            {% endif %}
             <h3 class="serif i-title" style="margin:0 0 12px;font-size:21px;line-height:1.32;font-weight:400;color:#0F2B5B;letter-spacing:-0.1px;">
               {{ slot.editorial.headline_operational or "Titolo non disponibile" }}
             </h3>
@@ -190,23 +185,23 @@ a.plain, a.plain:visited { text-decoration: none; }
 
             {% if slot.editorial.what_to_do %}
             <p class="sans" style="margin:0 0 9px;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#8B95A3;font-weight:700;">
-              Cosa fare / cosa evitare
+              Cosa fare ora
             </p>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 16px;">
               {% for action in slot.editorial.what_to_do %}
               <tr>
-                <td valign="top" class="sans" style="width:20px;padding:4px 10px 4px 0;font-size:13px;line-height:1.6;color:#D1427C;font-weight:700;">{{ loop.index }}</td>
-                <td valign="top" class="sans" style="padding:4px 0;font-size:14px;line-height:1.6;color:#1E293B;">{{ action }}</td>
+                <td valign="top" style="width:3px;" bgcolor="#D1427C">&nbsp;</td>
+                <td valign="top" class="sans" style="padding:4px 0 4px 12px;font-size:14.5px;line-height:1.6;color:#1E293B;font-weight:600;">{{ action }}</td>
               </tr>
               {% endfor %}
             </table>
             {% endif %}
 
-            {% if slot.editorial.summary %}
+            {% if slot.position == 1 and slot.editorial.summary %}
             <p class="sans" style="margin:0 0 16px;font-size:14px;line-height:1.68;color:#5A6472;">{{ slot.editorial.summary }}</p>
             {% endif %}
 
-            {% if slot.evidence_quote %}
+            {% if slot.position == 1 and slot.evidence_quote %}
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 18px;">
               <tr>
                 <td bgcolor="#F6FAFB" style="background-color:#F6FAFB;padding:16px 18px;border-left:3px solid #D1427C;">
@@ -237,17 +232,13 @@ a.plain, a.plain:visited { text-decoration: none; }
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #F0F2F5;margin-top:4px;">
               <tr>
                 <td valign="middle" class="stack sans" style="padding:12px 0 0;font-size:11px;color:#8B95A3;">
-                  <span style="color:{{ confidence_colors.get(slot.editorial.confidence.value, '#8B95A3') }};font-weight:700;letter-spacing:0.8px;">
-                    Affidabilità {{ slot.editorial.confidence.value | upper }}
-                  </span>
-                  {% if slot.source_name %}
-                  <span style="color:#C3C9D2;">&nbsp;&middot;&nbsp;</span>{{ slot.source_name }}
-                  {% endif %}
+                  {% if slot.editorial.source_note %}{{ slot.editorial.source_note }}
+                  {% elif slot.source_name %}{{ slot.source_name }}{% endif %}
                 </td>
                 {% if slot.source_url %}
                 <td valign="middle" align="right" class="stack stack-gap" style="padding:12px 0 0;">
                   <a href="{{ slot.source_url }}" target="_blank" rel="noopener noreferrer" class="sans plain" style="font-size:12px;font-weight:700;color:#008484;text-decoration:none;white-space:nowrap;">
-                    Leggi la fonte &rarr;
+                    Consulta il testo integrale &rarr;
                   </a>
                 </td>
                 {% endif %}
@@ -419,19 +410,16 @@ def render_plain_text(
             lines.extend(["", f"--- {SECTION_LABELS.get(section, section)} ---", ""])
 
         ed = slot.editorial
-        if ed.hook_question:
-            lines.append(f"{slot.position}. {ed.hook_question}")
-            lines.append(f"   {ed.headline_operational or 'N/A'}")
-        else:
-            lines.append(f"{slot.position}. {ed.headline_operational or 'N/A'}")
+        lines.append(f"{slot.position}. {ed.headline_operational or 'N/A'}")
         if ed.why_it_matters:
-            lines.append(f"   Perché conta: {ed.why_it_matters}")
+            lines.append(f"   In pratica: {ed.why_it_matters}")
         if ed.what_to_do:
-            lines.append("   Cosa fare / cosa evitare:")
+            lines.append("   Cosa fare ora:")
             lines.extend(f"     {i}. {action}" for i, action in enumerate(ed.what_to_do, 1))
-        if ed.summary:
+        # Only the week's priority gets the extended treatment.
+        if slot.position == 1 and ed.summary:
             lines.append(f"   {ed.summary}")
-        if slot.evidence_quote:
+        if slot.position == 1 and slot.evidence_quote:
             lines.append(f'   "{slot.evidence_quote}" - {slot.source_name}')
 
         if slot.source_links:
@@ -440,7 +428,8 @@ def render_plain_text(
         elif slot.source_url:
             lines.append(f"   Fonte: {slot.source_name} - {slot.source_url}")
 
-        lines.append(f"   [Affidabilità {ed.confidence.value.upper()}]")
+        if ed.source_note:
+            lines.append(f"   {ed.source_note}")
         lines.append("")
 
     lines.extend(["", "-" * 60, CTA_TITLE, CTA_SUBTITLE, cta_url, "", DISCLAIMER])

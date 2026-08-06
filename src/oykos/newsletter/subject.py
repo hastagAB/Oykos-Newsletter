@@ -20,15 +20,21 @@ PREHEADER_MAX_CHARS = 120
 TOP_ITEMS_FOR_SUBJECT = 3
 
 SUBJECT_SYSTEM = f"""You write subject lines for a weekly operational briefing read by
-Italian pediatricians of free choice.
+Italian pediatricians of free choice (PLS).
 
 Rules:
-- Write in Italian.
+- Write in Italian, with correct accents.
 - Maximum {SUBJECT_MAX_CHARS} characters for the subject.
-- Benefit-driven and concrete: name what the reader gains or must not miss.
-- Professional, never clickbait, no emoji, no ALL CAPS.
-- preheader: up to {PREHEADER_MAX_CHARS} characters that complement the subject
-  rather than repeating it."""
+- Name the topics and the consequence, leaving one useful question open.
+  Interest must come from clinical relevance, never from withholding information.
+  Good: "Asma, influenza, epilessia: cosa cambia davvero".
+  Also good: "Attacco acuto d'asma: cosa non cambiare questa settimana".
+- Never clickbait, no emoji, no ALL CAPS, no manufactured urgency.
+- Never audit the reader: no "Hai visto...", no "Le tue pratiche sono allineate...".
+- preheader: up to {PREHEADER_MAX_CHARS} characters anticipating the benefit of
+  reading, complementing the subject rather than repeating it. For example
+  "Tre aggiornamenti per il PLS, due verifiche utili e un documento da non
+  modificare\"."""
 
 
 class SubjectResponse(BaseModel):

@@ -121,9 +121,9 @@ LANDING_BODY = """
   <p class="eyebrow">Briefing operativo settimanale</p>
   <h1>{{ brand }}</h1>
   <p class="lede">
-    Per Pediatri di Libera Scelta. Ogni settimana 5 aggiornamenti che rispondono a tre
-    domande in 20-40 secondi: cosa è successo, perché conta per un PLS, cosa cambia domani
-    mattina in studio. Lettura 3-5 minuti.
+    Per Pediatri di Libera Scelta. Ogni settimana solo ciò che è stato pubblicato in
+    quella settimana: cosa cambia, perché conta nella pratica, cosa fare ora.
+    Abbiamo già letto e verificato le fonti. Lettura 3-5 minuti.
   </p>
   <form method="POST" action="/subscribe">
     <div class="field">

@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 TARGET_ITALY_RATIO = 0.7
 ITALY_RATIO_TOLERANCE = 0.1
-MIN_TARGET_ITEMS = 10
 MAX_LOW_CONFIDENCE = 3
 
 # Core areas that should be represented in every issue when material exists.
@@ -155,8 +154,10 @@ def compute_quality_report(
         )
     if report.low_confidence_count > MAX_LOW_CONFIDENCE:
         report.issues.append(f"{report.low_confidence_count} items with low confidence")
-    if report.total_selected < MIN_TARGET_ITEMS:
-        report.issues.append(f"Only {report.total_selected} items selected (target 10-12)")
+    # A thin week is a correct outcome, not a defect: the guidelines put recency
+    # above filling the layout. Only an empty issue is worth flagging.
+    if report.total_selected == 0:
+        report.issues.append("No item published this week cleared the gates")
     if report.missing_areas:
         report.issues.append(f"Core areas missing: {', '.join(report.missing_areas)}")
     if report.blocked_count:

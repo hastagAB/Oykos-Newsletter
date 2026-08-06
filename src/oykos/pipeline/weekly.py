@@ -33,6 +33,7 @@ from oykos.newsletter.template import render_html, render_plain_text
 from oykos.observability.metrics import compute_quality_report
 from oykos.processing.gates import filter_candidates
 from oykos.processing.ranker import rank_and_select
+from oykos.processing.recency import filter_to_week
 
 logger = logging.getLogger(__name__)
 
@@ -212,12 +213,21 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
         logger.error("No candidates available - cannot build an issue")
         return None
 
+    # Recency is not a tie-breaker, it is a precondition: an item outside this
+    # week cannot ship, so it must never occupy a shortlist slot or cost a
+    # synthesis call. Filter before ranking, not after.
+    in_week = filter_to_week(filter_candidates(candidates), week)
+    logger.info("%d of %d candidates were published in %s", len(in_week), len(candidates), week)
+    if not in_week:
+        logger.error("Nothing was published in %s - no issue to build", week)
+        return None
+
     # Gate and rank BEFORE writing any copy: synthesis is the expensive call, so
     # it only runs on items that have already earned a slot.
     shortlist = [
         item
         for item, _ in rank_and_select(
-            filter_candidates(candidates),
+            in_week,
             max_total=settings.max_newsletter_items + EDITORIAL_HEADROOM,
             max_italy=settings.max_italy_slots + EDITORIAL_HEADROOM,
             max_foreign=settings.max_foreign_slots + EDITORIAL_HEADROOM,

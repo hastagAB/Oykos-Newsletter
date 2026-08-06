@@ -12,6 +12,7 @@ signs off, and a delivered issue never repeats.
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +52,8 @@ from oykos.processing.scoring import detect_penalties, score_item
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "news_items.json"
 WEEK = "2026-W17"
+# Items only ship in the week they were published, so fixtures carry that date.
+IN_WEEK = datetime.fromisocalendar(2026, 17, 3).replace(tzinfo=UTC)
 
 # Subscores an editor would assign, keyed by fixture. Kept in the test rather
 # than the fixture file so the fixtures stay pure source material.
@@ -103,6 +106,7 @@ def _build_item(key: str, raw: dict[str, Any]) -> NewsItem:
         content=ContentBlock(
             title=raw["title"],
             canonical_url=raw["canonical_url"],
+            published_at=IN_WEEK,
             raw_text=raw["raw_text"],
             document_type=DocumentType(raw["document_type"]),
             key_passages=[KeyPassage(quote=q) for q in raw["key_passages"]],
@@ -230,9 +234,8 @@ def test_rendered_issue_has_every_blueprint_block(items, settings) -> None:
     )
 
     assert "Cosa cambia davvero questa settimana" in html
-    assert "Cosa fare / cosa evitare" in html
+    assert "Cosa fare ora" in html
     assert "Fonti" in html
-    assert "Affidabilità" in html
     assert "Annulla iscrizione" in html
     assert "Informazione professionale destinata a medici" in html
 

@@ -298,12 +298,12 @@ WORKBENCH_BODY = """
   </div>
   {% endif %}
 
-  {% if item.hook %}<p class="eyebrow" style="color:#008484">{{ item.hook }}</p>{% endif %}
+  {% if item.note %}<p class="eyebrow" style="color:#008484">{{ item.note }}</p>{% endif %}
   <h3>{{ item.headline }}</h3>
   <p class="lede" style="margin-bottom:12px">{{ item.why }}</p>
 
   {% if item.actions %}
-  <p class="eyebrow">Cosa fare / cosa evitare</p>
+  <p class="eyebrow">Cosa fare ora</p>
   <ol>{% for a in item.actions %}<li>{{ a }}</li>{% endfor %}</ol>
   {% endif %}
 
@@ -335,7 +335,7 @@ WORKBENCH_BODY = """
                maxlength="90" value="{{ item.headline }}">
       </div>
       <div class="field">
-        <label for="w-{{ item.position }}">Perché conta per il PLS</label>
+        <label for="w-{{ item.position }}">In pratica, questo significa</label>
         <textarea id="w-{{ item.position }}" name="why_it_matters"
                   style="min-height:60px">{{ item.why }}</textarea>
       </div>
@@ -404,7 +404,7 @@ def _slot_view(slot: NewsletterSlot, decision: ReviewDecision | None) -> dict[st
         "needs_review": slot.editorial.review.needs_human_review,
         "review_reason": slot.editorial.review.review_reason or "campionamento",
         "unsupported": slot.editorial.unsupported_claims,
-        "hook": slot.editorial.hook_question,
+        "note": slot.editorial.source_note,
         "headline": slot.editorial.headline_operational,
         "why": slot.editorial.why_it_matters,
         "actions": slot.editorial.what_to_do,

@@ -67,6 +67,7 @@ class NewsItemRepository:
             document_type=item.content.document_type.value,
             language=item.content.language,
             raw_text=item.content.raw_text,
+            access_limited=item.content.access_limited,
             geo=item.classification.geo.value,
             taxonomy_tags=[t.value for t in item.classification.taxonomy_tags],
             setting=item.classification.setting.value,
@@ -76,7 +77,7 @@ class NewsItemRepository:
             subscores=item.scoring.subscores.model_dump(),
             penalties=item.scoring.penalties,
             transferability=item.scoring.transferability,
-            hook_question=item.editorial.hook_question,
+            source_note=item.editorial.source_note,
             headline_operational=item.editorial.headline_operational,
             why_it_matters=item.editorial.why_it_matters,
             what_to_do=item.editorial.what_to_do,
@@ -230,7 +231,7 @@ class NewsItemRepository:
     async def update_editorial(self, item_id: str, editorial: EditorialBlock) -> None:
         row = await self._get_row(item_id)
         if row:
-            row.hook_question = editorial.hook_question
+            row.source_note = editorial.source_note
             row.headline_operational = editorial.headline_operational
             row.why_it_matters = editorial.why_it_matters
             row.what_to_do = editorial.what_to_do
@@ -265,6 +266,7 @@ class NewsItemRepository:
                 document_type=DocumentType(row.document_type),
                 language=row.language,
                 raw_text=row.raw_text,
+                access_limited=row.access_limited,
                 key_passages=[KeyPassage(**p) for p in (row.key_passages or [])],
             ),
             classification=Classification(
@@ -280,7 +282,7 @@ class NewsItemRepository:
                 penalties=row.penalties if row.penalties else [],
             ),
             editorial=EditorialBlock(
-                hook_question=row.hook_question,
+                source_note=row.source_note,
                 headline_operational=row.headline_operational,
                 why_it_matters=row.why_it_matters,
                 what_to_do=row.what_to_do if row.what_to_do else [],

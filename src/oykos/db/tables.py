@@ -36,6 +36,7 @@ class NewsItemRow(Base):
     document_type: Mapped[str] = mapped_column(String(50), default="news")
     language: Mapped[str] = mapped_column(String(10), default="it")
     raw_text: Mapped[str] = mapped_column(Text, default="")
+    access_limited: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Classification
     geo: Mapped[str] = mapped_column(String(10), default="IT")
@@ -51,7 +52,7 @@ class NewsItemRow(Base):
     transferability: Mapped[float] = mapped_column(Float, default=1.0)
 
     # Editorial
-    hook_question: Mapped[str] = mapped_column(Text, default="")
+    source_note: Mapped[str] = mapped_column(Text, default="")
     headline_operational: Mapped[str] = mapped_column(Text, default="")
     why_it_matters: Mapped[str] = mapped_column(Text, default="")
     what_to_do: Mapped[list[str]] = mapped_column(JSON, default=list)
