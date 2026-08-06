@@ -7,10 +7,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
 
 from oykos.ingestion.orchestrator import MAX_ITEM_AGE_DAYS
-from oykos.ingestion.scraper import extract_published_at, is_paywalled
+from oykos.ingestion.scraper import extract_published_at, fetch_scrape, is_paywalled
+from oykos.models.source import FetchConfig, Source
+from oykos.models.taxonomy import SourceType, Tier
 
 
 @pytest.mark.parametrize(
@@ -102,6 +105,39 @@ def test_a_2016_publication_falls_outside_the_freshness_window() -> None:
 )
 def test_login_walls_are_recognised(text: str) -> None:
     assert is_paywalled(text)
+
+
+@pytest.mark.asyncio
+async def test_members_only_articles_are_dropped_not_reported() -> None:
+    """We never link a reader to something they cannot open."""
+    listing = '<main><a href="/riservato">Documento riservato ai soci SICuPP</a></main>'
+    wall = (
+        "<html><body><main>L'accesso a questo contenuto è riservato "
+        "esclusivamente ai soci SICuPP. Inserisci le tue credenziali."
+        "</main></body></html>"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = listing if request.url.path == "/" else wall
+        return httpx.Response(200, html=body)
+
+    source = Source(
+        key="test",
+        name="Test",
+        url="https://esempio.it/",
+        source_type=SourceType.SCRAPE,
+        tier=Tier.TIER_1_ITALY,
+        reliability=4,
+        country="IT",
+        category_hints=[],
+        fetch_config=FetchConfig(),
+    )
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, follow_redirects=True) as client:
+        items = await fetch_scrape(source, client)
+
+    assert items == []
 
 
 def test_real_articles_are_not_mistaken_for_login_walls() -> None:

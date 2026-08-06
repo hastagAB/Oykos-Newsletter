@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: de2e1967a3cc
+Revision ID: 7dcbd01cd177
 Revises: 
-Create Date: 2026-08-06 19:06:30.027630
+Create Date: 2026-08-06 20:59:25.823849
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'de2e1967a3cc'
+revision: str = '7dcbd01cd177'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -59,7 +59,6 @@ def upgrade() -> None:
     sa.Column('document_type', sa.String(length=50), nullable=False),
     sa.Column('language', sa.String(length=10), nullable=False),
     sa.Column('raw_text', sa.Text(), nullable=False),
-    sa.Column('access_limited', sa.Boolean(), nullable=False),
     sa.Column('geo', sa.String(length=10), nullable=False),
     sa.Column('taxonomy_tags', sa.JSON(), nullable=False),
     sa.Column('setting', sa.String(length=20), nullable=False),

@@ -40,9 +40,6 @@ class ContentBlock(BaseModel):
     raw_text: str = ""
     canonical_url: str
     key_passages: list[KeyPassage] = Field(default_factory=list)
-    # True when the body we could read is a login wall. The item may still be
-    # worth reporting, but no clinical recommendation may be drawn from it.
-    access_limited: bool = False
 
 
 class Classification(BaseModel):
