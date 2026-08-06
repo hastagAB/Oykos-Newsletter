@@ -316,6 +316,8 @@ class NewsletterRepository:
             created_at=_naive(newsletter.created_at),
             subject_line=newsletter.subject_line,
             preheader=newsletter.preheader,
+            ab_element=newsletter.ab_element,
+            ab_variant_b=newsletter.ab_variant_b,
             tldr=newsletter.tldr,
             reading_time_minutes=newsletter.reading_time_minutes,
             html_content=newsletter.html_content,
@@ -365,6 +367,14 @@ class NewsletterRepository:
             row.sent_at = utcnow()
         await self.session.flush()
 
+    async def update_sent_count(self, issue_id: str, sent_count: int) -> None:
+        """The denominator every click rate is measured against."""
+        row = await self._get_row(issue_id)
+        if row is None:
+            return
+        row.sent_count = sent_count
+        await self.session.flush()
+
     async def mark_approved(self, issue_id: str, approved_by: str) -> None:
         row = await self._get_row(issue_id)
         if row is None:
@@ -411,6 +421,8 @@ class NewsletterRepository:
             created_at=row.created_at,
             subject_line=row.subject_line,
             preheader=row.preheader or "",
+            ab_element=row.ab_element or "none",
+            ab_variant_b=row.ab_variant_b or "",
             tldr=list(row.tldr or []),
             reading_time_minutes=row.reading_time_minutes or 0,
             html_content=row.html_content,

@@ -101,6 +101,10 @@ class NewsletterRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     subject_line: Mapped[str] = mapped_column(Text, default="")
     preheader: Mapped[str] = mapped_column(Text, default="")
+    # Which single element was varied this week, and the B text for it.
+    ab_element: Mapped[str] = mapped_column(String(20), default="none")
+    ab_variant_b: Mapped[str] = mapped_column(Text, default="")
+    sent_count: Mapped[int] = mapped_column(Integer, default=0)
     tldr: Mapped[list[str]] = mapped_column(JSON, default=list)
     reading_time_minutes: Mapped[int] = mapped_column(Integer, default=0)
     html_content: Mapped[str] = mapped_column(Text, default="")
@@ -149,6 +153,29 @@ class SubscriberRow(Base):
     topics: Mapped[list[str]] = mapped_column(JSON, default=list)
     alert_opt_in: Mapped[bool] = mapped_column(Boolean, default=True)
     region: Mapped[str] = mapped_column(String(40), default="")
+    # Stable A/B bucket, assigned once so a subscriber never flips between
+    # variants and week-on-week comparisons stay homogeneous.
+    ab_group: Mapped[str] = mapped_column(String(1), default="A", index=True)
+
+
+class ClickEventRow(Base):
+    """One recorded click.
+
+    Personal data: it links a subscriber to what they chose to read.
+    ``SubscriberRepository.delete_subscriber_data`` deletes these rows on erasure,
+    and the privacy notice must mention click measurement before it is enabled.
+    """
+    __tablename__ = "click_events"
+
+    event_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    issue_id: Mapped[str] = mapped_column(String(36), index=True)
+    subscriber_id: Mapped[str] = mapped_column(String(36), index=True)
+    week: Mapped[str] = mapped_column(String(10), index=True)
+    # "source" (a link out to a primary source) or "cta".
+    kind: Mapped[str] = mapped_column(String(20), default="source", index=True)
+    target_url: Mapped[str] = mapped_column(Text, default="")
+    ab_group: Mapped[str] = mapped_column(String(1), default="A")
+    clicked_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
 
 class FeedbackRow(Base):

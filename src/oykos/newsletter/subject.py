@@ -34,28 +34,33 @@ Rules:
 - preheader: up to {PREHEADER_MAX_CHARS} characters anticipating the benefit of
   reading, complementing the subject rather than repeating it. For example
   "Tre aggiornamenti per il PLS, due verifiche utili e un documento da non
-  modificare\"."""
+  modificare".
+- subject_variant_b: a second subject line taking a genuinely different angle on
+  the same content - for instance the clinical consequence where the first is
+  operational. Same rules and same length limit. It must not be a paraphrase."""
 
 
 class SubjectResponse(BaseModel):
     subject: str
     preheader: str
+    # A genuinely different angle on the same content, for the A/B comparison.
+    subject_variant_b: str = ""
 
 
-def _fallback(newsletter: Newsletter) -> tuple[str, str]:
+def _fallback(newsletter: Newsletter) -> tuple[str, str, str]:
     base = f"L'Essenziale in Pediatria - {newsletter.week}"
     preheader = (
         f"{len(newsletter.slots)} aggiornamenti operativi, "
         f"lettura {newsletter.reading_time_minutes} minuti."
     )
-    return base[:SUBJECT_MAX_CHARS], preheader[:PREHEADER_MAX_CHARS]
+    return base[:SUBJECT_MAX_CHARS], preheader[:PREHEADER_MAX_CHARS], ""
 
 
 async def generate_subject_line(
     newsletter: Newsletter,
     client: LLMClient,
-) -> tuple[str, str]:
-    """Generate (subject, preheader) for the issue."""
+) -> tuple[str, str, str]:
+    """Generate (subject, preheader, subject_variant_b) for the issue."""
     top_items = [
         slot.editorial.headline_operational
         for slot in newsletter.slots[:TOP_ITEMS_FOR_SUBJECT]
@@ -85,4 +90,5 @@ The issue has {len(newsletter.slots)} items and takes about
     return (
         resp.subject.strip()[:SUBJECT_MAX_CHARS],
         resp.preheader.strip()[:PREHEADER_MAX_CHARS],
+        resp.subject_variant_b.strip()[:SUBJECT_MAX_CHARS],
     )

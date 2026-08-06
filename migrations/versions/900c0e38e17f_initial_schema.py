@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: 0ea9b407cb5a
+Revision ID: 900c0e38e17f
 Revises: 
-Create Date: 2026-08-06 23:44:58.655769
+Create Date: 2026-08-07 00:18:35.625985
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0ea9b407cb5a'
+revision: str = '900c0e38e17f'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -33,6 +33,21 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_alerts_item_id'), 'alerts', ['item_id'], unique=False)
     op.create_index(op.f('ix_alerts_sent_at'), 'alerts', ['sent_at'], unique=False)
+    op.create_table('click_events',
+    sa.Column('event_id', sa.String(length=36), nullable=False),
+    sa.Column('issue_id', sa.String(length=36), nullable=False),
+    sa.Column('subscriber_id', sa.String(length=36), nullable=False),
+    sa.Column('week', sa.String(length=10), nullable=False),
+    sa.Column('kind', sa.String(length=20), nullable=False),
+    sa.Column('target_url', sa.Text(), nullable=False),
+    sa.Column('ab_group', sa.String(length=1), nullable=False),
+    sa.Column('clicked_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('event_id')
+    )
+    op.create_index(op.f('ix_click_events_issue_id'), 'click_events', ['issue_id'], unique=False)
+    op.create_index(op.f('ix_click_events_kind'), 'click_events', ['kind'], unique=False)
+    op.create_index(op.f('ix_click_events_subscriber_id'), 'click_events', ['subscriber_id'], unique=False)
+    op.create_index(op.f('ix_click_events_week'), 'click_events', ['week'], unique=False)
     op.create_table('feedback',
     sa.Column('feedback_id', sa.String(length=36), nullable=False),
     sa.Column('issue_id', sa.String(length=36), nullable=False),
@@ -96,6 +111,9 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('subject_line', sa.Text(), nullable=False),
     sa.Column('preheader', sa.Text(), nullable=False),
+    sa.Column('ab_element', sa.String(length=20), nullable=False),
+    sa.Column('ab_variant_b', sa.Text(), nullable=False),
+    sa.Column('sent_count', sa.Integer(), nullable=False),
     sa.Column('tldr', sa.JSON(), nullable=False),
     sa.Column('reading_time_minutes', sa.Integer(), nullable=False),
     sa.Column('html_content', sa.Text(), nullable=False),
@@ -139,8 +157,10 @@ def upgrade() -> None:
     sa.Column('topics', sa.JSON(), nullable=False),
     sa.Column('alert_opt_in', sa.Boolean(), nullable=False),
     sa.Column('region', sa.String(length=40), nullable=False),
+    sa.Column('ab_group', sa.String(length=1), nullable=False),
     sa.PrimaryKeyConstraint('subscriber_id')
     )
+    op.create_index(op.f('ix_subscribers_ab_group'), 'subscribers', ['ab_group'], unique=False)
     op.create_index(op.f('ix_subscribers_confirm_token'), 'subscribers', ['confirm_token'], unique=True)
     op.create_index(op.f('ix_subscribers_email'), 'subscribers', ['email'], unique=True)
     op.create_index(op.f('ix_subscribers_status'), 'subscribers', ['status'], unique=False)
@@ -154,6 +174,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_subscribers_status'), table_name='subscribers')
     op.drop_index(op.f('ix_subscribers_email'), table_name='subscribers')
     op.drop_index(op.f('ix_subscribers_confirm_token'), table_name='subscribers')
+    op.drop_index(op.f('ix_subscribers_ab_group'), table_name='subscribers')
     op.drop_table('subscribers')
     op.drop_index(op.f('ix_review_decisions_item_id'), table_name='review_decisions')
     op.drop_index(op.f('ix_review_decisions_issue_id'), table_name='review_decisions')
@@ -166,6 +187,11 @@ def downgrade() -> None:
     op.drop_table('news_items')
     op.drop_index(op.f('ix_feedback_issue_id'), table_name='feedback')
     op.drop_table('feedback')
+    op.drop_index(op.f('ix_click_events_week'), table_name='click_events')
+    op.drop_index(op.f('ix_click_events_subscriber_id'), table_name='click_events')
+    op.drop_index(op.f('ix_click_events_kind'), table_name='click_events')
+    op.drop_index(op.f('ix_click_events_issue_id'), table_name='click_events')
+    op.drop_table('click_events')
     op.drop_index(op.f('ix_alerts_sent_at'), table_name='alerts')
     op.drop_index(op.f('ix_alerts_item_id'), table_name='alerts')
     op.drop_table('alerts')

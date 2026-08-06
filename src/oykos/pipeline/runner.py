@@ -16,7 +16,10 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from oykos.config import Settings
+from oykos.db.clicks import ClickRepository
+from oykos.db.repository import NewsletterRepository
 from oykos.db.tables import Base
+from oykos.models.taxonomy import IssueStatus
 from oykos.observability.logging import setup_logging
 from oykos.pipeline.daily import run_daily_pipeline
 from oykos.pipeline.weekly import run_weekly_pipeline, send_approved_issues
@@ -87,3 +90,45 @@ async def send_pending(settings: Settings | None = None) -> None:
         sent = await send_approved_issues(session, settings)
     logger.info("Delivered %d approved issue(s)", len(sent))
     await _ping_healthcheck(settings)
+
+
+async def print_report(week: str | None = None, settings: Settings | None = None) -> None:
+    """Print the measurement indicators for one issue.
+
+    Open rate is absent on purpose: Apple Mail Privacy Protection pre-fetches
+    images, so it measures the mail client rather than the reader.
+    """
+    settings = settings or Settings()  # type: ignore[call-arg]
+    async with _session_scope(settings) as session:
+        repo = NewsletterRepository(session)
+        issue = (
+            await repo.get_by_week(week)
+            if week
+            else next(iter(await repo.list_by_status(IssueStatus.SENT)), None)
+        )
+        if issue is None:
+            print(f"No issue found for {week or 'the most recent send'}")  # noqa: T201
+            return
+
+        report = await ClickRepository(session).report(str(issue.issue_id))
+
+    if report is None:
+        print("No data for that issue")  # noqa: T201
+        return
+
+    print(f"\n{report.week}")  # noqa: T201
+    print(f"  inviate            {report.sent}")  # noqa: T201
+    print(f"  lettori con clic   {report.unique_clickers}  ({report.click_rate:.1%})")  # noqa: T201
+    print(f"  clic sulle fonti   {report.source_clicks}")  # noqa: T201
+    print(f"  clic sulla CTA     {report.cta_clicks}")  # noqa: T201
+    print(f"  ritorno successivo {report.returning}")  # noqa: T201
+    print(f"  disiscrizioni      {report.unsubscribes}")  # noqa: T201
+
+    if report.ab_element != "none":
+        print(f"\n  test A/B su: {report.ab_element}")  # noqa: T201
+        for variant in report.variants:
+            print(  # noqa: T201
+                f"    {variant.group}  inviate {variant.sent:>4}  "
+                f"clic {variant.unique_clickers:>4}  ({variant.click_rate:.1%})",
+            )
+    print()  # noqa: T201

@@ -8,6 +8,7 @@ risk-based human review gate -> delivery.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,7 @@ from oykos.db.repository import (
 )
 from oykos.db.subscribers import SubscriberRepository
 from oykos.delivery.email_sender import OutboundMessage, send_bulk, send_newsletter
+from oykos.delivery.tracking import tracked_url
 from oykos.delivery.wordpress import publish_issue
 from oykos.llm.client import LLMClient
 from oykos.llm.extraction import attach_key_passages
@@ -131,6 +133,8 @@ async def deliver(
         )
 
     logger.info("Sending to %d subscribers", len(subscribers))
+    if settings.click_tracking and not settings.tracking_enabled:
+        logger.warning("CLICK_TRACKING is on but TRACKING_SECRET is empty - not tracking")
 
     # One rendered message per subscriber, so each gets their own unsubscribe
     # and preferences link. Sent over a shared, throttled connection.
@@ -140,25 +144,37 @@ async def deliver(
             f"{settings.base_url.rstrip('/')}/unsubscribe/{subscriber.unsubscribe_token}"
         )
         preferences_url = settings.preferences_url_for(subscriber.unsubscribe_token)
+        cta_url = _tracked(
+            settings, newsletter, subscriber.unsubscribe_token, "cta", settings.cta_url,
+        )
+        subject = _variant(
+            newsletter, subscriber.ab_group, "subject", newsletter.subject_line,
+        )
+        html = render_html(
+            newsletter,
+            settings.newsletter_title,
+            unsubscribe_url=unsubscribe_url,
+            preferences_url=preferences_url,
+            archive_url=settings.archive_url,
+            cta_url=cta_url,
+            logo_url=settings.logo_url,
+            preheader=_variant(
+                newsletter, subscriber.ab_group, "preheader", newsletter.preheader,
+            ),
+        )
         messages.append(
             OutboundMessage(
                 to_email=subscriber.email,
-                subject=newsletter.subject_line,
-                html_content=render_html(
-                    newsletter,
-                    settings.newsletter_title,
-                    unsubscribe_url=unsubscribe_url,
-                    preferences_url=preferences_url,
-                    archive_url=settings.archive_url,
-                    cta_url=settings.cta_url,
-                    logo_url=settings.logo_url,
+                subject=subject,
+                html_content=_track_source_links(
+                    settings, newsletter, subscriber.unsubscribe_token, html,
                 ),
                 text_content=render_plain_text(
                     newsletter,
                     settings.newsletter_title,
                     unsubscribe_url=unsubscribe_url,
                     preferences_url=preferences_url,
-                    cta_url=settings.cta_url,
+                    cta_url=cta_url,
                 ),
                 list_unsubscribe_url=unsubscribe_url,
             ),
@@ -167,6 +183,57 @@ async def deliver(
     delivered = await send_bulk(settings, messages)
     logger.info("Delivered %d/%d", delivered, len(subscribers))
     return delivered > 0
+
+
+def _variant(newsletter: Newsletter, ab_group: str, element: str, default: str) -> str:
+    """The B text when this issue varies ``element`` and the reader is in B."""
+    if ab_group != "B" or newsletter.ab_element != element or not newsletter.ab_variant_b:
+        return default
+    return newsletter.ab_variant_b
+
+
+def _tracked(
+    settings: Settings,
+    newsletter: Newsletter,
+    subscriber_token: str,
+    kind: str,
+    url: str,
+) -> str:
+    if not settings.tracking_enabled or not url:
+        return url
+    return tracked_url(
+        base_url=settings.base_url,
+        issue_id=str(newsletter.issue_id),
+        subscriber_token=subscriber_token,
+        kind=kind,
+        url=url,
+        secret=settings.tracking_secret.get_secret_value(),
+    )
+
+
+def _track_source_links(
+    settings: Settings,
+    newsletter: Newsletter,
+    subscriber_token: str,
+    html: str,
+) -> str:
+    """Rewrite outbound source links to go through the redirect endpoint.
+
+    Only external destinations are rewritten: unsubscribe, preferences and
+    archive links must keep working even if tracking is later switched off.
+    """
+    if not settings.tracking_enabled:
+        return html
+
+    own = settings.base_url.rstrip("/")
+
+    def replace(match: re.Match[str]) -> str:
+        url = match.group(1)
+        if url.startswith(own) or not url.startswith("http"):
+            return match.group(0)
+        return f'href="{_tracked(settings, newsletter, subscriber_token, "source", url)}"'
+
+    return re.sub(r'href="(https?://[^"]+)"', replace, html)
 
 
 async def deliver_and_finalize(
@@ -192,6 +259,11 @@ async def deliver_and_finalize(
 
     await NewsItemRepository(session).mark_items_sent(
         [str(slot.item_id) for slot in newsletter.slots],
+    )
+    # Click rates are meaningless without the denominator.
+    await newsletter_repo.update_sent_count(
+        str(newsletter.issue_id),
+        await SubscriberRepository(session).count_active(),
     )
     await newsletter_repo.update_status(str(newsletter.issue_id), IssueStatus.SENT)
     newsletter.status = IssueStatus.SENT
@@ -250,9 +322,15 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
         logger.error("Newsletter has 0 slots after gating - nothing to send")
         return None
 
-    newsletter.subject_line, newsletter.preheader = await generate_subject_line(
+    newsletter.subject_line, newsletter.preheader, subject_b = await generate_subject_line(
         newsletter, client,
     )
+    # Vary exactly one element, so any difference in clicks is attributable.
+    if settings.ab_element == "subject" and subject_b:
+        newsletter.ab_element = "subject"
+        newsletter.ab_variant_b = subject_b
+    elif settings.ab_element in {"preheader", "cta"}:
+        logger.info("AB_ELEMENT=%s needs a B text supplied by an editor", settings.ab_element)
 
     newsletter.html_content = render_html(
         newsletter,

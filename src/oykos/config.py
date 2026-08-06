@@ -90,6 +90,26 @@ class Settings(BaseSettings):
     # before the first real send.
     public_show_unsent: bool = False
 
+    # Measurement (guidelines section 11). Click tracking links a subscriber to
+    # what they read, so it is personal data: leave it off unless the privacy
+    # notice covers it. Open rates are deliberately not tracked - Apple Mail
+    # Privacy Protection makes them meaningless.
+    click_tracking: bool = False
+    # Signs tracked links. Separate from REVIEW_TOKEN because those links live in
+    # inboxes for weeks: rotating the review secret must not break them.
+    tracking_secret: SecretStr = SecretStr("")
+    # Vary exactly one element per issue: none | subject | preheader | cta.
+    ab_element: str = "none"
+
+    @field_validator("ab_element")
+    @classmethod
+    def _known_ab_element(cls, value: str) -> str:
+        allowed = {"none", "subject", "preheader", "cta"}
+        if value not in allowed:
+            msg = f"ab_element must be one of {sorted(allowed)}"
+            raise ValueError(msg)
+        return value
+
     # Subscriber management
     base_url: str = "http://localhost:8000"
     unsubscribe_mailto: str = ""
@@ -152,6 +172,11 @@ class Settings(BaseSettings):
             and self.wordpress_user
             and self.wordpress_app_password.get_secret_value(),
         )
+
+    @property
+    def tracking_enabled(self) -> bool:
+        """Tracking needs a signing secret; without one links would be forgeable."""
+        return self.click_tracking and bool(self.tracking_secret.get_secret_value())
 
     def preferences_url_for(self, token: str) -> str:
         """Per-subscriber preferences link, keyed by their unsubscribe token."""

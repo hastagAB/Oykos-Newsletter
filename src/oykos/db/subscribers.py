@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import secrets
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from oykos.db.repository import utcnow
-from oykos.db.tables import FeedbackRow, SubscriberRow
+from oykos.db.tables import ClickEventRow, FeedbackRow, SubscriberRow
 
 
 def _generate_token() -> str:
@@ -26,6 +26,9 @@ class SubscriberRepository:
             status="pending_confirmation",
             confirm_token=_generate_token(),
             unsubscribe_token=_generate_token(),
+            # Assigned once and never changed, so week-on-week comparisons
+            # measure the variant rather than reshuffled audiences.
+            ab_group="B" if secrets.randbelow(2) else "A",
             consented_at=utcnow(),
             created_at=utcnow(),
         )
@@ -125,10 +128,17 @@ class SubscriberRepository:
         return result.scalar_one()
 
     async def delete_subscriber_data(self, email: str) -> bool:
-        """GDPR right to erasure - hard delete subscriber record."""
+        """GDPR right to erasure - hard delete the subscriber and their click history.
+
+        Click events are personal data: they tie a person to what they read.
+        Erasure that left them behind would not be erasure.
+        """
         row = await self.get_by_email(email)
         if row is None:
             return False
+        await self.session.execute(
+            delete(ClickEventRow).where(ClickEventRow.subscriber_id == row.subscriber_id),
+        )
         await self.session.delete(row)
         await self.session.flush()
         return True

@@ -354,6 +354,7 @@ def render_html(
     archive_url: str = "#",
     cta_url: str = CTA_URL,
     logo_url: str = LOGO_URL,
+    preheader: str = "",
 ) -> str:
     """Render the newsletter as HTML email.
 
@@ -369,7 +370,7 @@ def render_html(
         slots=newsletter.slots,
         section_labels=SECTION_LABELS,
         tldr=newsletter.tldr,
-        preheader=newsletter.preheader,
+        preheader=preheader or newsletter.preheader,
         reading_time=newsletter.reading_time_minutes or MIN_READING_MINUTES,
         unsubscribe_url=unsubscribe_url,
         preferences_url=preferences_url,

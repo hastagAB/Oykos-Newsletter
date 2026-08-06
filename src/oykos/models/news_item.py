@@ -153,6 +153,9 @@ class Newsletter(BaseModel):
     issue_id: UUID = Field(default_factory=uuid4)
     week: str  # e.g. "2026-W17"
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # Exactly one element is varied per issue, so a result is attributable.
+    ab_element: str = "none"
+    ab_variant_b: str = ""
     slots: list[NewsletterSlot] = Field(default_factory=list)
     subject_line: str = ""
     preheader: str = ""

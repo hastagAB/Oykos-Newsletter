@@ -132,7 +132,7 @@ def _stub_boundaries(monkeypatch: pytest.MonkeyPatch) -> dict:
         return len(messages)
 
     async def fake_subjects(newsletter, client):
-        return "Oggetto A", "Preheader"
+        return "Oggetto A", "Preheader", "Oggetto B"
 
     async def fake_passages(item, client):
         return item

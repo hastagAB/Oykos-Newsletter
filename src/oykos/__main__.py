@@ -8,6 +8,7 @@ Usage:
     oykos serve              Web server: subscribers, preferences, archive, review
     oykos check-smtp         Verify the SMTP connection without sending anything
     oykos check-sources      Fetch every source and report which ones work
+    oykos report [WEEK]      Clicks, return and unsubscribes for an issue
 """
 from __future__ import annotations
 
@@ -38,6 +39,8 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("run", help="Daily ingestion followed by weekly composition")
     sub.add_parser("check-smtp", help="Verify the SMTP connection without sending")
     sub.add_parser("check-sources", help="Fetch every source and report what works")
+    report = sub.add_parser("report", help="Measurement indicators for an issue")
+    report.add_argument("week", nargs="?", help="ISO week, e.g. 2026-W32. Defaults to latest.")
 
     serve = sub.add_parser("serve", help="Start the web server")
     serve.add_argument("--host", default="127.0.0.1", help="Bind host")
@@ -80,6 +83,12 @@ def cli() -> None:
             print(f"{status} {result.key:24} {result.source_type.value:7} {detail}")  # noqa: T201
         print(f"\n{len(working)}/{len(results)} sources returned items.")  # noqa: T201
         sys.exit(0 if working else 1)
+
+    if args.command == "report":
+        from oykos.pipeline.runner import print_report  # noqa: PLC0415
+
+        asyncio.run(print_report(getattr(args, "week", None)))
+        sys.exit(0)
 
     if args.preview:
         os.environ["PREVIEW_MODE"] = "true"

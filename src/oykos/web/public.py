@@ -16,9 +16,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from oykos.config import Settings
+from oykos.db.clicks import ClickRepository
 from oykos.db.subscribers import FeedbackRepository, SubscriberRepository
 from oykos.db.tables import NewsletterRow, SubscriberRow
 from oykos.delivery.email_sender import send_newsletter
+from oykos.delivery.tracking import parse_token
 from oykos.models.taxonomy import TaxonomyTag
 from oykos.web.design import message_page, render_fragment, render_page
 
@@ -200,6 +202,46 @@ async def latest_raw(request: Request) -> HTMLResponse:
     if row is None:
         raise HTTPException(status_code=404, detail="No issue available")
     return HTMLResponse(row.html_content, headers={"X-Robots-Tag": "noindex"})
+
+
+@router.get("/r/{token}")
+async def tracked_redirect(request: Request, token: str) -> RedirectResponse:
+    """Record a click, then send the reader on to the real destination.
+
+    The token is HMAC-signed. An unsigned redirect here would let anyone point
+    our domain at a phishing page, so a bad signature is a 404, never a redirect.
+    """
+    settings = get_settings(request)
+    parsed = parse_token(token, settings.tracking_secret.get_secret_value())
+    if parsed is None:
+        raise HTTPException(status_code=404, detail="Unknown link")
+
+    issue_id, subscriber_token, kind, url = parsed
+
+    factory = get_session_factory(request)
+    async with factory() as session:
+        subscriber = await SubscriberRepository(session).get_by_unsubscribe_token(
+            subscriber_token,
+        )
+        issue = (
+            await session.execute(
+                select(NewsletterRow).where(NewsletterRow.issue_id == issue_id),
+            )
+        ).scalars().first()
+
+        if subscriber is not None and issue is not None:
+            await ClickRepository(session).record(
+                issue_id=issue_id,
+                subscriber_id=subscriber.subscriber_id,
+                week=issue.week,
+                kind=kind,
+                target_url=url,
+                ab_group=subscriber.ab_group,
+            )
+            await session.commit()
+
+    # A failure to record must never cost the reader their click.
+    return RedirectResponse(url, status_code=302)
 
 
 def _confirmation_body(confirm_url: str) -> tuple[str, str]:
