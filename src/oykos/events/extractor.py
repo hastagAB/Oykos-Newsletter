@@ -33,6 +33,9 @@ PLS_ORGANISATIONS = frozenset({"fimp", "simpef", "acp", "simpe"})
 CONSTITUTIONAL_EVIDENCE = (
     "Evento della federazione dei pediatri di famiglia: pubblico PLS per statuto."
 )
+# Stated only as fact. The model leaves why_relevant empty when it judges the
+# audience unsupported, and a blank line in the section helps nobody.
+CONSTITUTIONAL_WHY = "Evento della federazione dei pediatri di famiglia."
 
 EXTRACT_SYSTEM = """You extract professional events from an Italian pediatric web page
 for a newsletter read by Pediatri di Libera Scelta (PLS).
@@ -133,6 +136,7 @@ def to_event(
 
     fit = _to_enum(raw.pls_fit, PLSFit, PLSFit.UNSUPPORTED)
     evidence = [e.strip() for e in raw.programme_evidence if e.strip()]
+    why = raw.why_relevant.strip()
 
     # A listing page often names no audience at all. When the promoter is one of
     # the PLS federations, the audience is established by what that federation
@@ -144,6 +148,7 @@ def to_event(
     ):
         fit = PLSFit.EXPLICIT
         evidence = [*evidence, CONSTITUTIONAL_EVIDENCE]
+        why = why or CONSTITUTIONAL_WHY
 
     now = datetime.now(UTC)
     return Event(
@@ -174,7 +179,7 @@ def to_event(
         last_seen_at=now,
         extraction_confidence=raw.extraction_confidence,
         is_national_pls_congress=raw.is_national_pls_congress,
-        why_relevant=raw.why_relevant.strip(),
+        why_relevant=why,
     )
 
 
