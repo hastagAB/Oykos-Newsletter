@@ -24,6 +24,16 @@ logger = logging.getLogger(__name__)
 MAX_PAGE_CHARS = 14000
 MAX_EVENTS_PER_PAGE = 12
 
+# The Italian federations OF family pediatricians. Their own congresses and
+# courses are for PLS by constitution, so the audience is established rather
+# than inferred. This is deliberately narrow: it is a named list of PLS
+# organisations, NOT a rule that any pediatric society implies relevance.
+PLS_ORGANISATIONS = frozenset({"fimp", "simpef", "acp", "simpe"})
+
+CONSTITUTIONAL_EVIDENCE = (
+    "Evento della federazione dei pediatri di famiglia: pubblico PLS per statuto."
+)
+
 EXTRACT_SYSTEM = """You extract professional events from an Italian pediatric web page
 for a newsletter read by Pediatri di Libera Scelta (PLS).
 
@@ -106,7 +116,12 @@ def _to_enum(value: str, enum_type: type[EventFormat] | type[PLSFit], default): 
         return default
 
 
-def to_event(raw: ExtractedEvent, source_id: str, page_url: str) -> Event | None:
+def to_event(
+    raw: ExtractedEvent,
+    source_id: str,
+    page_url: str,
+    source_acronym: str = "",
+) -> Event | None:
     """Convert an extracted record, dropping anything that fails the hard rule."""
     start = _parse_date(raw.start_date)
     if start is None or not raw.title.strip():
@@ -116,11 +131,25 @@ def to_event(raw: ExtractedEvent, source_id: str, page_url: str) -> Event | None
     if not detail_url.startswith("http"):
         return None
 
+    fit = _to_enum(raw.pls_fit, PLSFit, PLSFit.UNSUPPORTED)
+    evidence = [e.strip() for e in raw.programme_evidence if e.strip()]
+
+    # A listing page often names no audience at all. When the promoter is one of
+    # the PLS federations, the audience is established by what that federation
+    # is, which is why the editorial feedback expects Children 2026 to appear.
+    promoter_key = (raw.promoter or source_acronym).strip().lower()
+    if fit is PLSFit.UNSUPPORTED and any(
+        org in promoter_key or org == source_acronym.strip().lower()
+        for org in PLS_ORGANISATIONS
+    ):
+        fit = PLSFit.EXPLICIT
+        evidence = [*evidence, CONSTITUTIONAL_EVIDENCE]
+
     now = datetime.now(UTC)
     return Event(
         source_id=source_id,
         title=raw.title.strip(),
-        promoter=raw.promoter.strip(),
+        promoter=raw.promoter.strip() or source_acronym,
         organiser=raw.organiser.strip(),
         detail_url=detail_url,
         programme_url=raw.programme_url.strip(),
@@ -132,8 +161,8 @@ def to_event(raw: ExtractedEvent, source_id: str, page_url: str) -> Event | None
         venue=raw.venue.strip(),
         event_format=_to_enum(raw.event_format, EventFormat, EventFormat.UNKNOWN),
         stated_audience=raw.stated_audience.strip(),
-        programme_evidence=[e.strip() for e in raw.programme_evidence if e.strip()],
-        pls_fit=_to_enum(raw.pls_fit, PLSFit, PLSFit.UNSUPPORTED),
+        programme_evidence=evidence,
+        pls_fit=fit,
         ecm_accredited=raw.ecm_accredited,
         ecm_credits=raw.ecm_credits.strip(),
         accredited_professions=[p.strip() for p in raw.accredited_professions if p.strip()],
@@ -155,6 +184,7 @@ async def extract_events(
     source_id: str,
     source_name: str,
     client: LLMClient,
+    source_acronym: str = "",
 ) -> list[Event]:
     """Extract dated events from one listing page."""
     if not page_text.strip():
@@ -162,7 +192,7 @@ async def extract_events(
 
     prompt = f"""Extract the events listed on this page.
 
-Source: {source_name}
+Source: {source_name} ({source_acronym or 'n/a'})
 Page URL: {page_url}
 Today: {datetime.now(UTC).date().isoformat()}
 
@@ -181,7 +211,7 @@ Page content:
 
     events: list[Event] = []
     for raw in resp.events[:MAX_EVENTS_PER_PAGE]:
-        event = to_event(raw, source_id, page_url)
+        event = to_event(raw, source_id, page_url, source_acronym)
         if event is not None:
             events.append(event)
 

@@ -142,7 +142,9 @@ async def crawl_source(
         if pdf_text:
             text = f"{text}\n\n[PROGRAMME PDF {programme_url}]\n{pdf_text}"
 
-    events = await extract_events(text, listing_url, source.source_id, source.name, llm)
+    events = await extract_events(
+        text, listing_url, source.source_id, source.name, llm, source.acronym,
+    )
     for event in events:
         if programme_url and not event.programme_url:
             event.programme_url = programme_url
