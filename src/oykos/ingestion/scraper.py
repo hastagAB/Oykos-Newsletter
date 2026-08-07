@@ -26,7 +26,7 @@ from oykos.models.source import Source
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = "OykosNewsletterBot/1.0 (+https://oykos.example/bot; pediatric news aggregation)"
+USER_AGENT = "OykosNewsletterBot/1.0 (+https://oykomed.it; pediatric news aggregation)"
 MAX_DETAIL_CONCURRENCY = 4
 MAX_ARTICLE_CHARS = 20000
 MIN_LINK_TEXT_CHARS = 15

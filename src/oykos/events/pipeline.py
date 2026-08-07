@@ -44,7 +44,7 @@ class EventRepository:
     async def remember_listing(self, source_id: str, listing_url: str) -> None:
         row = await self.session.get(ResolvedEventSourceRow, source_id)
         if row is None:
-            row = ResolvedEventSourceRow(source_id=source_id)
+            row = ResolvedEventSourceRow(source_id=source_id, failure_count=0)
             self.session.add(row)
         row.listing_url = listing_url
         row.verified_at = datetime.now(UTC).replace(tzinfo=None)
@@ -55,9 +55,11 @@ class EventRepository:
     async def record_failure(self, source_id: str) -> None:
         row = await self.session.get(ResolvedEventSourceRow, source_id)
         if row is None:
-            row = ResolvedEventSourceRow(source_id=source_id)
+            # Column defaults are applied on flush, so a brand new row still has
+            # None here and cannot be incremented.
+            row = ResolvedEventSourceRow(source_id=source_id, failure_count=0)
             self.session.add(row)
-        row.failure_count += 1
+        row.failure_count = (row.failure_count or 0) + 1
         row.needs_manual_review = row.failure_count >= MAX_DISCOVERY_FAILURES
         await self.session.flush()
 
@@ -189,13 +191,15 @@ async def refresh_events(
 
     events, health = await crawl_sources(scheduled, client, resolved=resolved)
 
+    # Bookkeeping must never cost us the events we just paid to extract.
+    for event in events:
+        await repo.upsert(event)
+    await session.commit()
+
     for source_id, url in health.discovered.items():
         await repo.remember_listing(source_id, url)
     for failure in health.failed:
         await repo.record_failure(failure.split(" ", 1)[0].split(":")[0])
-
-    for event in events:
-        await repo.upsert(event)
     await session.commit()
 
     logger.info("Event refresh complete: %s", health.summary())

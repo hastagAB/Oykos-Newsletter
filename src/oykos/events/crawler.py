@@ -23,7 +23,7 @@ from oykos.events.discovery import discover_listing_url
 from oykos.events.extractor import extract_events
 from oykos.events.models import Event
 from oykos.events.registry import EventSource
-from oykos.ingestion.scraper import fetch_html
+from oykos.ingestion.scraper import USER_AGENT, fetch_html
 from oykos.llm.client import LLMClient
 
 logger = logging.getLogger(__name__)
@@ -169,7 +169,12 @@ async def crawl_sources(
         by_host.setdefault(source.domain.lower(), []).append(source)
 
     owns_client = client is None
-    client = client or httpx.AsyncClient(follow_redirects=True)
+    client = client or httpx.AsyncClient(
+        follow_redirects=True,
+        # Without an identifying User-Agent many Italian society sites answer
+        # 403 to the default httpx string.
+        headers={"User-Agent": USER_AGENT},
+    )
     semaphore = asyncio.Semaphore(MAX_HOST_CONCURRENCY)
     collected: list[Event] = []
 
