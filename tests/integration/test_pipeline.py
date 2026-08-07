@@ -27,6 +27,7 @@ from oykos.models.news_item import (
     Subscores,
 )
 from oykos.models.taxonomy import Confidence, DocumentType, Geo, IssueStatus, TaxonomyTag
+from oykos.newsletter.subject import SubjectLines
 from oykos.pipeline import daily, weekly
 
 
@@ -131,8 +132,14 @@ def _stub_boundaries(monkeypatch: pytest.MonkeyPatch) -> dict:
         )
         return len(messages)
 
-    async def fake_subjects(newsletter, client):
-        return "Oggetto A", "Preheader", "Oggetto B"
+    async def fake_subjects(newsletter, client, current_cta_title=""):
+        return SubjectLines(
+            subject="Oggetto A",
+            preheader="Preheader",
+            subject_b="Oggetto B",
+            preheader_b="Preheader B",
+            cta_b="CTA B",
+        )
 
     async def fake_passages(item, client):
         return item

@@ -31,7 +31,7 @@ from oykos.models.news_item import NewsItem, Newsletter
 from oykos.models.taxonomy import Confidence, IssueStatus
 from oykos.newsletter.composer import compose_newsletter
 from oykos.newsletter.subject import generate_subject_line
-from oykos.newsletter.template import render_html, render_plain_text
+from oykos.newsletter.template import CTA_TITLE, render_html, render_plain_text
 from oykos.observability.metrics import compute_quality_report
 from oykos.processing.gates import filter_candidates
 from oykos.processing.ranker import rank_and_select
@@ -150,6 +150,7 @@ async def deliver(
         subject = _variant(
             newsletter, subscriber.ab_group, "subject", newsletter.subject_line,
         )
+        cta_title = _variant(newsletter, subscriber.ab_group, "cta", "")
         html = render_html(
             newsletter,
             settings.newsletter_title,
@@ -161,6 +162,7 @@ async def deliver(
             preheader=_variant(
                 newsletter, subscriber.ab_group, "preheader", newsletter.preheader,
             ),
+            cta_title=cta_title,
         )
         messages.append(
             OutboundMessage(
@@ -175,6 +177,7 @@ async def deliver(
                     unsubscribe_url=unsubscribe_url,
                     preferences_url=preferences_url,
                     cta_url=cta_url,
+                    cta_title=cta_title,
                 ),
                 list_unsubscribe_url=unsubscribe_url,
             ),
@@ -322,15 +325,19 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
         logger.error("Newsletter has 0 slots after gating - nothing to send")
         return None
 
-    newsletter.subject_line, newsletter.preheader, subject_b = await generate_subject_line(
-        newsletter, client,
-    )
+    lines = await generate_subject_line(newsletter, client, CTA_TITLE)
+    newsletter.subject_line = lines.subject
+    newsletter.preheader = lines.preheader
     # Vary exactly one element, so any difference in clicks is attributable.
-    if settings.ab_element == "subject" and subject_b:
-        newsletter.ab_element = "subject"
-        newsletter.ab_variant_b = subject_b
-    elif settings.ab_element in {"preheader", "cta"}:
-        logger.info("AB_ELEMENT=%s needs a B text supplied by an editor", settings.ab_element)
+    variant_b = lines.variant_for(settings.ab_element)
+    if variant_b:
+        newsletter.ab_element = settings.ab_element
+        newsletter.ab_variant_b = variant_b
+    elif settings.ab_element != "none":
+        logger.warning(
+            "AB_ELEMENT=%s but no B text was generated - sending one version to everyone",
+            settings.ab_element,
+        )
 
     newsletter.html_content = render_html(
         newsletter,

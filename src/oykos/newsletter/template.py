@@ -355,6 +355,7 @@ def render_html(
     cta_url: str = CTA_URL,
     logo_url: str = LOGO_URL,
     preheader: str = "",
+    cta_title: str = "",
 ) -> str:
     """Render the newsletter as HTML email.
 
@@ -380,7 +381,7 @@ def render_html(
         confidence_colors=CONFIDENCE_COLORS,
         logo_url=logo_url,
         logo_alt=LOGO_ALT,
-        cta_title=CTA_TITLE,
+        cta_title=cta_title or CTA_TITLE,
         cta_subtitle=CTA_SUBTITLE,
         cta_button=CTA_BUTTON,
         cta_url=cta_url,
@@ -394,6 +395,7 @@ def render_plain_text(
     unsubscribe_url: str = "",
     preferences_url: str = "",
     cta_url: str = CTA_URL,
+    cta_title: str = "",
 ) -> str:
     """Render the newsletter as plain text fallback."""
     reading_time = newsletter.reading_time_minutes or MIN_READING_MINUTES
@@ -439,7 +441,7 @@ def render_plain_text(
             lines.append("   [Accesso riservato ai soci]")
         lines.append("")
 
-    lines.extend(["", "-" * 60, CTA_TITLE, CTA_SUBTITLE, cta_url, "", DISCLAIMER])
+    lines.extend(["", "-" * 60, cta_title or CTA_TITLE, CTA_SUBTITLE, cta_url, "", DISCLAIMER])
     if newsletter.public_url:
         lines.append(f"Leggi online: {newsletter.public_url}")
     if preferences_url:
