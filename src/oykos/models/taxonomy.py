@@ -46,6 +46,7 @@ class Section(str, Enum):
     REGULATORY = "regulatory"
     DEVICE = "device"
     CME = "cme"
+    EVENTS = "events"
 
 
 class Penalty(str, Enum):
@@ -55,6 +56,12 @@ class Penalty(str, Enum):
     PAYWALL = "paywall"
     PRESS_RELEASE = "press_release"
     SINGLE_SOURCE = "single_source"
+    # Editorial feedback 2026-08-07: content that only a hospital team can act
+    # on, a case report with no practice implication, and a generic educational
+    # reminder all rank below genuinely new evidence or guidance.
+    HOSPITAL_ONLY = "hospital_only"
+    CASE_REPORT = "case_report"
+    GENERIC_REMINDER = "generic_reminder"
 
 
 class ExclusionReason(str, Enum):

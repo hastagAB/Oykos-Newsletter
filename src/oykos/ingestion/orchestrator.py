@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from oykos.db.repository import NewsItemRepository
 from oykos.ingestion.dedup import is_duplicate
+from oykos.ingestion.evidence import fetch_europe_pmc
 from oykos.ingestion.normalizer import clean_html, normalize_url
 from oykos.ingestion.rss import fetch_rss
 from oykos.ingestion.scraper import USER_AGENT, fetch_scrape
@@ -46,6 +47,8 @@ async def fetch_source(
         return await fetch_rss(source, client)
     if source.source_type is SourceType.SCRAPE:
         return await fetch_scrape(source, client)
+    if source.source_type is SourceType.API:
+        return await fetch_europe_pmc(source, client)
     logger.info(
         "No connector for %s source %s - skipping",
         source.source_type.value,

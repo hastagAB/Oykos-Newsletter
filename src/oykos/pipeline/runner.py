@@ -19,7 +19,10 @@ from oykos.config import Settings
 from oykos.db.clicks import ClickRepository
 from oykos.db.repository import NewsletterRepository
 from oykos.db.tables import Base
+from oykos.events.pipeline import events_for_issue, refresh_events
+from oykos.llm.client import LLMClient
 from oykos.models.taxonomy import IssueStatus
+from oykos.newsletter.template import event_view
 from oykos.observability.logging import setup_logging
 from oykos.pipeline.daily import run_daily_pipeline
 from oykos.pipeline.weekly import run_weekly_pipeline, send_approved_issues
@@ -90,6 +93,36 @@ async def send_pending(settings: Settings | None = None) -> None:
         sent = await send_approved_issues(session, settings)
     logger.info("Delivered %d approved issue(s)", len(sent))
     await _ping_healthcheck(settings)
+
+
+async def print_events(offset: int = 0, settings: Settings | None = None) -> None:
+    """Crawl the scheduled event sources and show what the section would contain."""
+    settings = settings or Settings()  # type: ignore[call-arg]
+    setup_logging(settings.log_level)
+
+    async with _session_scope(settings) as session:
+        client = LLMClient(settings)
+        health = await refresh_events(session, settings, client, offset=offset)
+        events = await events_for_issue(session, settings)
+
+    print(f"\ncrawl: {health.summary()}")  # noqa: T201
+    for failure in health.failed[:10]:
+        print(f"  failed: {failure}")  # noqa: T201
+    for source_id, url in list(health.discovered.items())[:10]:
+        print(f"  discovered: {source_id} -> {url}")  # noqa: T201
+
+    print(f"\n{len(events)} event(s) would be shown:\n")  # noqa: T201
+    for event in events:
+        view = event_view(event)
+        where = f" - {view['where']}" if view["where"] else ""
+        print(f"  {view['when']}{where}: {view['title']}")  # noqa: T201
+        print(f"     fit={event.pls_fit.value} score={event.relevance_score}")  # noqa: T201
+        if event.stated_audience:
+            print(f"     audience: {event.stated_audience[:90]}")  # noqa: T201
+        if view["why"]:
+            print(f"     {view['why']}")  # noqa: T201
+        print(f"     {view['url']}")  # noqa: T201
+    print()  # noqa: T201
 
 
 async def print_report(week: str | None = None, settings: Settings | None = None) -> None:

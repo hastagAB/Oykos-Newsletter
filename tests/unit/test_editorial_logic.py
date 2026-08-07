@@ -5,6 +5,8 @@ see. Everything here is deterministic, so it is worth testing directly.
 """
 from __future__ import annotations
 
+import pytest
+
 from oykos.models.news_item import (
     Citation,
     Classification,
@@ -20,7 +22,7 @@ from oykos.processing.gates import evaluate_gates, filter_candidates
 from oykos.processing.scoring import (
     apply_penalties,
     compute_raw_score,
-    compute_transferability,
+    default_applicability,
     detect_penalties,
     score_item,
 )
@@ -80,9 +82,23 @@ def test_all_fives_scores_one_hundred() -> None:
 
 
 def test_weights_are_applied() -> None:
-    # PLS relevance carries 22% of the weight: 5 * 0.22 * 20 = 22
+    """PLS practice relevance is the heaviest criterion at 35%."""
+    # pls_relevance is 60% of the practice blend, which carries 35%:
+    # 5 * 0.60 * 0.35 * 20 = 21, plus the default applicability 1.0 * 0.10 * 100.
     only_relevance = Subscores(pls_relevance=5)
-    assert abs(compute_raw_score(only_relevance) - 22.0) < 0.01
+    assert abs(compute_raw_score(only_relevance) - 31.0) < 0.01
+
+
+def test_relevance_outweighs_authority() -> None:
+    """A trusted source cannot carry a story a PLS cannot use.
+
+    This is the regression guard for the intraosseous-access selection: an
+    authoritative hospital item must not outscore a usable primary care one.
+    """
+    authoritative_but_useless = Subscores(source_trust=5, novelty=5, pls_relevance=0)
+    useful_but_modest = Subscores(pls_relevance=5, actionability=4, source_trust=2)
+
+    assert compute_raw_score(useful_but_modest) > compute_raw_score(authoritative_but_useless)
 
 
 def test_penalties_subtract_and_clamp_at_zero() -> None:
@@ -91,29 +107,41 @@ def test_penalties_subtract_and_clamp_at_zero() -> None:
     assert apply_penalties(5.0, ["press_release"]) == 0.0
 
 
-def test_transferability_bands() -> None:
-    """Foreign items are discounted by how well they transfer to Italy."""
-    assert compute_transferability(_item(geo=Geo.IT)) == 1.0
-    assert compute_transferability(_item(geo=Geo.EU, source_key="ema_news")) == 0.95
-    assert compute_transferability(_item(geo=Geo.EU, doc_type=DocumentType.GUIDELINE)) == 0.85
-    assert compute_transferability(_item(geo=Geo.EU, doc_type=DocumentType.STUDY)) == 0.75
-    assert compute_transferability(
+def test_applicability_fallback_bands() -> None:
+    """The deterministic fallback still ranks EU regulatory above US news."""
+    assert default_applicability(_item(geo=Geo.IT)) == 1.0
+    assert default_applicability(_item(geo=Geo.EU, source_key="ema_news")) == 0.95
+    assert default_applicability(_item(geo=Geo.EU, doc_type=DocumentType.GUIDELINE)) == 0.85
+    assert default_applicability(_item(geo=Geo.EU, doc_type=DocumentType.STUDY)) == 0.75
+    assert default_applicability(
         _item(geo=Geo.GLOBAL, country="US", doc_type=DocumentType.NEWS),
     ) == 0.65
 
 
-def test_transferability_stays_in_range() -> None:
+def test_applicability_fallback_stays_in_range() -> None:
     for geo in (Geo.EU, Geo.GLOBAL):
         for country in ("EU", "US", "UK", "JP"):
-            assert 0.6 <= compute_transferability(_item(geo=geo, country=country)) <= 1.0
+            assert 0.6 <= default_applicability(_item(geo=geo, country=country)) <= 1.0
 
 
-def test_score_item_keeps_transferability_in_subscores() -> None:
-    """The blueprint item schema stores transferability inside subscores."""
-    scoring = score_item(_item(geo=Geo.EU, doc_type=DocumentType.GUIDELINE))
-    assert scoring.subscores.transferability == 0.85
+def test_score_item_preserves_judged_applicability() -> None:
+    """The classifier's judgement survives scoring; it is not overwritten."""
+    item = _item(geo=Geo.EU, doc_type=DocumentType.GUIDELINE, transferability=0.42)
+
+    scoring = score_item(item)
+
+    assert scoring.subscores.transferability == 0.42
     assert scoring.transferability == scoring.subscores.transferability
-    assert 0.0 <= scoring.score_total <= 100.0
+
+
+def test_applicability_is_not_applied_twice() -> None:
+    """It is a weighted criterion, never also a multiplier on the total."""
+    low = score_item(_item(geo=Geo.EU, transferability=0.0)).score_total
+    high = score_item(_item(geo=Geo.EU, transferability=1.0)).score_total
+
+    # 10% of the 0-100 scale, and nothing more.
+    assert high - low == pytest.approx(10.0, abs=0.5)
+    assert 0.0 <= low <= high <= 100.0
 
 
 # ── Selection gates ───────────────────────────────────────

@@ -79,13 +79,16 @@ def _build_registry() -> dict[str, Source]:
         Source(key="acta_paed", name="Acta Paediatrica", url="https://rss.onlinelibrary.wiley.com/feed/16512227/most-recent", source_type=SourceType.RSS, tier=Tier.TIER_2_EUROPE, reliability=3, country="EU", category_hints=[], fetch_config=fc_rss),
         Source(key="eap", name="European Academy of Paediatrics", url="https://www.eapaediatrics.eu/feed/", source_type=SourceType.RSS, tier=Tier.TIER_2_EUROPE, reliability=4, country="EU", category_hints=[], fetch_config=fc_rss),
         # --- Tier 3: Global ---
-        Source(key="aap_guidelines", name="AAP Clinical Practice Guidelines", url="https://publications.aap.org/collection/523/Clinical-Practice-Guidelines", source_type=SourceType.SCRAPE, tier=Tier.TIER_3_GLOBAL, reliability=3, country="US", category_hints=[], fetch_config=fc_scrape),
-        Source(key="aap_news", name="AAP News", url="https://publications.aap.org/rss/site_154/48.xml", source_type=SourceType.RSS, tier=Tier.TIER_3_GLOBAL, reliability=3, country="US", category_hints=[], fetch_config=fc_rss),
-        Source(key="jama_ped", name="JAMA Pediatrics", url="https://jamanetwork.com/rss/site_16/116.xml", source_type=SourceType.RSS, tier=Tier.TIER_3_GLOBAL, reliability=3, country="US", category_hints=[], fetch_config=fc_rss),
-        Source(key="lancet_child", name="Lancet Child & Adolescent Health", url="https://www.thelancet.com/rssfeed/lanchi_current.xml", source_type=SourceType.RSS, tier=Tier.TIER_3_GLOBAL, reliability=3, country="UK", category_hints=[], fetch_config=fc_rss),
+        Source(key="aap_guidelines", name="AAP Clinical Practice Guidelines", url="https://publications.aap.org/collection/523/Clinical-Practice-Guidelines", source_type=SourceType.SCRAPE, tier=Tier.TIER_3_GLOBAL, reliability=4, country="US", category_hints=[], fetch_config=fc_scrape),
+        # Pediatrics, JAMA Pediatrics and AAP News all return 403/404 to
+        # automated clients (verified 2026-08-07). Europe PMC indexes the same
+        # journals and serves a documented API, so the peer-reviewed literature
+        # the editorial feedback asks for arrives through this one connector.
+        Source(key="europe_pmc", name="Europe PMC - Pediatric Evidence", url="https://www.ebi.ac.uk/europepmc/webservices/rest/search", source_type=SourceType.API, tier=Tier.TIER_3_GLOBAL, reliability=4, country="GLOBAL", category_hints=[TaxonomyTag.RESEARCH_EVIDENCE], fetch_config=FetchConfig(timeout_seconds=45, max_items=25)),
+        Source(key="lancet_child", name="Lancet Child & Adolescent Health", url="https://www.thelancet.com/rssfeed/lanchi_current.xml", source_type=SourceType.RSS, tier=Tier.TIER_3_GLOBAL, reliability=4, country="UK", category_hints=[], fetch_config=fc_rss),
         Source(key="bmc_ped", name="BMC Pediatrics", url="https://bmcpediatr.biomedcentral.com/articles/most-recent/rss.xml", source_type=SourceType.RSS, tier=Tier.TIER_3_GLOBAL, reliability=3, country="UK", category_hints=[], fetch_config=fc_rss),
         Source(key="ped_research", name="Pediatric Research", url="https://www.nature.com/pr.rss", source_type=SourceType.RSS, tier=Tier.TIER_3_GLOBAL, reliability=3, country="UK", category_hints=[], fetch_config=fc_rss),
-        Source(key="who", name="WHO Publications", url="https://www.who.int/", source_type=SourceType.SCRAPE, tier=Tier.TIER_3_GLOBAL, reliability=5, country="GLOBAL", category_hints=[], fetch_config=fc_scrape),
+        Source(key="who_news", name="WHO News", url="https://www.who.int/rss-feeds/news-english.xml", source_type=SourceType.RSS, tier=Tier.TIER_3_GLOBAL, reliability=5, country="GLOBAL", category_hints=[], fetch_config=fc_rss),
         Source(key="nice_guidance", name="NICE Guidance", url="https://www.nice.org.uk/guidance/published?ndt=Guidance", source_type=SourceType.SCRAPE, tier=Tier.TIER_3_GLOBAL, reliability=3, country="UK", category_hints=[], fetch_config=fc_scrape),
         # --- Tier 3: high-impact research and AI in clinical practice ---
         Source(key="nature_medicine", name="Nature Medicine", url="https://www.nature.com/nm.rss", source_type=SourceType.RSS, tier=Tier.TIER_3_GLOBAL, reliability=3, country="UK", category_hints=[TaxonomyTag.RESEARCH_EVIDENCE], fetch_config=fc_rss),

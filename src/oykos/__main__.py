@@ -9,6 +9,7 @@ Usage:
     oykos check-smtp         Verify the SMTP connection without sending anything
     oykos check-sources      Fetch every source and report which ones work
     oykos report [WEEK]      Clicks, return and unsubscribes for an issue
+    oykos events             Crawl PLS event sources and preview the section
 """
 from __future__ import annotations
 
@@ -41,6 +42,8 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("check-sources", help="Fetch every source and report what works")
     report = sub.add_parser("report", help="Measurement indicators for an issue")
     report.add_argument("week", nargs="?", help="ISO week, e.g. 2026-W32. Defaults to latest.")
+    events = sub.add_parser("events", help="Crawl event sources and list what would be shown")
+    events.add_argument("--offset", type=int, default=0, help="Rotate which sources are crawled")
 
     serve = sub.add_parser("serve", help="Start the web server")
     serve.add_argument("--host", default="127.0.0.1", help="Bind host")
@@ -83,6 +86,12 @@ def cli() -> None:
             print(f"{status} {result.key:24} {result.source_type.value:7} {detail}")  # noqa: T201
         print(f"\n{len(working)}/{len(results)} sources returned items.")  # noqa: T201
         sys.exit(0 if working else 1)
+
+    if args.command == "events":
+        from oykos.pipeline.runner import print_events  # noqa: PLC0415
+
+        asyncio.run(print_events(getattr(args, "offset", 0)))
+        sys.exit(0)
 
     if args.command == "report":
         from oykos.pipeline.runner import print_report  # noqa: PLC0415

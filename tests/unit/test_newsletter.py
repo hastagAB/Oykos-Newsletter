@@ -33,7 +33,7 @@ from oykos.newsletter.template import (
     render_html,
     render_plain_text,
 )
-from oykos.processing.ranker import MAX_ITALY, MAX_PER_SOURCE, MAX_TOTAL, SECTION_QUOTAS
+from oykos.processing.ranker import MAX_PER_SOURCE, MAX_TOTAL, SECTION_QUOTAS
 
 WEEK = "2026-W17"
 # Every item must be published inside the issue week, so fixtures carry a date.
@@ -161,10 +161,29 @@ def test_section_quotas_are_respected() -> None:
         assert counts.get(section.value, 0) <= quota.maximum
 
 
-def test_italy_foreign_split_is_enforced_on_final_slots() -> None:
-    newsletter = compose_newsletter(_full_candidate_pool(), WEEK)
-    assert newsletter.metrics.italy_count <= MAX_ITALY
-    assert newsletter.metrics.foreign_count <= 4
+def test_geography_does_not_cap_selection() -> None:
+    """Foreign items must be able to fill every slot on score alone.
+
+    The old 70/30 Italy quota locked out international evidence regardless of
+    how relevant it was to PLS practice, which is the bias the 2026-08-07
+    editorial feedback asked us to remove.
+    """
+    spread = [
+        [TaxonomyTag.DRUG_SAFETY],
+        [TaxonomyTag.DRUG_SAFETY],
+        [TaxonomyTag.VACCINATIONS],
+        [TaxonomyTag.VACCINATIONS],
+        [TaxonomyTag.TELEMEDICINE],
+    ]
+    foreign = [
+        _make_item(tags=tags, score=95 - index, geo=Geo.GLOBAL)
+        for index, tags in enumerate(spread)
+    ]
+
+    newsletter = compose_newsletter(foreign, WEEK)
+
+    assert newsletter.metrics.italy_count == 0
+    assert newsletter.metrics.foreign_count > 2
 
 
 def test_blocked_items_never_reach_the_reader() -> None:

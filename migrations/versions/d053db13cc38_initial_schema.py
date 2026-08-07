@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: 900c0e38e17f
+Revision ID: d053db13cc38
 Revises: 
-Create Date: 2026-08-07 00:18:35.625985
+Create Date: 2026-08-07 15:40:13.986442
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = '900c0e38e17f'
+revision: str = 'd053db13cc38'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -48,6 +48,52 @@ def upgrade() -> None:
     op.create_index(op.f('ix_click_events_kind'), 'click_events', ['kind'], unique=False)
     op.create_index(op.f('ix_click_events_subscriber_id'), 'click_events', ['subscriber_id'], unique=False)
     op.create_index(op.f('ix_click_events_week'), 'click_events', ['week'], unique=False)
+    op.create_table('event_sources_resolved',
+    sa.Column('source_id', sa.String(length=20), nullable=False),
+    sa.Column('listing_url', sa.Text(), nullable=False),
+    sa.Column('verified_at', sa.DateTime(), nullable=False),
+    sa.Column('failure_count', sa.Integer(), nullable=False),
+    sa.Column('needs_manual_review', sa.Boolean(), nullable=False),
+    sa.PrimaryKeyConstraint('source_id')
+    )
+    op.create_table('events',
+    sa.Column('event_id', sa.String(length=36), nullable=False),
+    sa.Column('source_id', sa.String(length=20), nullable=False),
+    sa.Column('title', sa.Text(), nullable=False),
+    sa.Column('promoter', sa.String(length=255), nullable=False),
+    sa.Column('organiser', sa.String(length=255), nullable=False),
+    sa.Column('detail_url', sa.Text(), nullable=False),
+    sa.Column('programme_url', sa.Text(), nullable=False),
+    sa.Column('source_urls', sa.JSON(), nullable=False),
+    sa.Column('start_date', sa.DateTime(), nullable=False),
+    sa.Column('end_date', sa.DateTime(), nullable=True),
+    sa.Column('city', sa.String(length=120), nullable=False),
+    sa.Column('region', sa.String(length=120), nullable=False),
+    sa.Column('venue', sa.String(length=255), nullable=False),
+    sa.Column('event_format', sa.String(length=20), nullable=False),
+    sa.Column('stated_audience', sa.Text(), nullable=False),
+    sa.Column('programme_evidence', sa.JSON(), nullable=False),
+    sa.Column('pls_fit', sa.String(length=20), nullable=False),
+    sa.Column('ecm_accredited', sa.Boolean(), nullable=True),
+    sa.Column('ecm_credits', sa.String(length=60), nullable=False),
+    sa.Column('accredited_professions', sa.JSON(), nullable=False),
+    sa.Column('registration_status', sa.String(length=120), nullable=False),
+    sa.Column('registration_deadline', sa.DateTime(), nullable=True),
+    sa.Column('early_registration_deadline', sa.DateTime(), nullable=True),
+    sa.Column('fee', sa.String(length=120), nullable=False),
+    sa.Column('first_seen_at', sa.DateTime(), nullable=False),
+    sa.Column('last_seen_at', sa.DateTime(), nullable=False),
+    sa.Column('extraction_confidence', sa.Float(), nullable=False),
+    sa.Column('relevance_score', sa.Float(), nullable=False),
+    sa.Column('why_relevant', sa.Text(), nullable=False),
+    sa.Column('is_national_pls_congress', sa.Boolean(), nullable=False),
+    sa.Column('dedup_key', sa.String(length=400), nullable=False),
+    sa.PrimaryKeyConstraint('event_id')
+    )
+    op.create_index(op.f('ix_events_dedup_key'), 'events', ['dedup_key'], unique=False)
+    op.create_index(op.f('ix_events_pls_fit'), 'events', ['pls_fit'], unique=False)
+    op.create_index(op.f('ix_events_source_id'), 'events', ['source_id'], unique=False)
+    op.create_index(op.f('ix_events_start_date'), 'events', ['start_date'], unique=False)
     op.create_table('feedback',
     sa.Column('feedback_id', sa.String(length=36), nullable=False),
     sa.Column('issue_id', sa.String(length=36), nullable=False),
@@ -187,6 +233,12 @@ def downgrade() -> None:
     op.drop_table('news_items')
     op.drop_index(op.f('ix_feedback_issue_id'), table_name='feedback')
     op.drop_table('feedback')
+    op.drop_index(op.f('ix_events_start_date'), table_name='events')
+    op.drop_index(op.f('ix_events_source_id'), table_name='events')
+    op.drop_index(op.f('ix_events_pls_fit'), table_name='events')
+    op.drop_index(op.f('ix_events_dedup_key'), table_name='events')
+    op.drop_table('events')
+    op.drop_table('event_sources_resolved')
     op.drop_index(op.f('ix_click_events_week'), table_name='click_events')
     op.drop_index(op.f('ix_click_events_subscriber_id'), table_name='click_events')
     op.drop_index(op.f('ix_click_events_kind'), table_name='click_events')

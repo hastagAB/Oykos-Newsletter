@@ -23,6 +23,8 @@ from oykos.db.subscribers import SubscriberRepository
 from oykos.delivery.email_sender import OutboundMessage, send_bulk, send_newsletter
 from oykos.delivery.tracking import tracked_url
 from oykos.delivery.wordpress import publish_issue
+from oykos.events.models import Event
+from oykos.events.pipeline import events_for_issue, refresh_events
 from oykos.llm.client import LLMClient
 from oykos.llm.extraction import attach_key_passages
 from oykos.llm.synthesis import synthesize_editorial
@@ -117,6 +119,9 @@ async def deliver(
     """Send the issue to every confirmed subscriber."""
     subscriber_repo = SubscriberRepository(session)
     subscribers = await subscriber_repo.get_active_subscribers()
+    # Re-selected at send time so a delivered issue never advertises an event
+    # that has since passed.
+    events = await events_for_issue(session, settings)
 
     if not subscribers:
         recipients = settings.recipient_list
@@ -163,6 +168,7 @@ async def deliver(
                 newsletter, subscriber.ab_group, "preheader", newsletter.preheader,
             ),
             cta_title=cta_title,
+            events=events,
         )
         messages.append(
             OutboundMessage(
@@ -178,6 +184,7 @@ async def deliver(
                     preferences_url=preferences_url,
                     cta_url=cta_url,
                     cta_title=cta_title,
+                    events=events,
                 ),
                 list_unsubscribe_url=unsubscribe_url,
             ),
@@ -304,8 +311,6 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
         for item, _ in rank_and_select(
             in_week,
             max_total=settings.max_newsletter_items + EDITORIAL_HEADROOM,
-            max_italy=settings.max_italy_slots + EDITORIAL_HEADROOM,
-            max_foreign=settings.max_foreign_slots + EDITORIAL_HEADROOM,
         )
     ]
     logger.info("%d candidates shortlisted for editorial", len(shortlist))
@@ -318,8 +323,6 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
         week,
         settings.newsletter_title,
         max_total=settings.max_newsletter_items,
-        max_italy=settings.max_italy_slots,
-        max_foreign=settings.max_foreign_slots,
     )
     if not newsletter.slots:
         logger.error("Newsletter has 0 slots after gating - nothing to send")
@@ -339,6 +342,17 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
             settings.ab_element,
         )
 
+    # Events use their own pipeline and their own freshness rule: proximity to
+    # the event date, never publication date.
+    events: list[Event] = []
+    if settings.events_enabled:
+        try:
+            await refresh_events(session, settings, client)
+            events = await events_for_issue(session, settings)
+        except Exception:
+            logger.exception("Event pipeline failed - issue ships without the section")
+        logger.info("%d event(s) selected for %s", len(events), week)
+
     newsletter.html_content = render_html(
         newsletter,
         settings.newsletter_title,
@@ -347,12 +361,14 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
         archive_url=settings.archive_url,
         cta_url=settings.cta_url,
         logo_url=settings.logo_url,
+        events=events,
     )
     newsletter.text_content = render_plain_text(
         newsletter,
         settings.newsletter_title,
         preferences_url=settings.preferences_url,
         cta_url=settings.cta_url,
+        events=events,
     )
 
     report = compute_quality_report(shortlist, newsletter)

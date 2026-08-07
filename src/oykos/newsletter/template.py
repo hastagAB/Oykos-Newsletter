@@ -1,8 +1,11 @@
 """HTML template rendering for newsletter - S023."""
 from __future__ import annotations
 
+from datetime import date
+
 from jinja2 import BaseLoader, Environment
 
+from oykos.events.models import Event, EventFormat
 from oykos.models.news_item import Newsletter
 
 MIN_READING_MINUTES = 6
@@ -30,6 +33,56 @@ CTA_SUBTITLE = (
 )
 CTA_BUTTON = "Scopri Oykos"
 CTA_URL = "https://oykomed.it"
+
+EVENTS_LABEL = "Prossimi appuntamenti per il PLS"
+EVENTS_INTRO = (
+    "Selezionati per la pediatria di famiglia. Date e sedi come indicate "
+    "dall'organizzatore."
+)
+EVENT_LINK_LABEL = "Programma e iscrizione"
+
+_MONTHS_IT = (
+    "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+    "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
+)
+
+
+def format_event_dates(start: date, end: date | None) -> str:
+    """Italian date range, collapsing a same-month range to '4-5 settembre'."""
+    if end is None or end == start:
+        return f"{start.day} {_MONTHS_IT[start.month - 1]}"
+    if (start.year, start.month) == (end.year, end.month):
+        return f"{start.day}-{end.day} {_MONTHS_IT[start.month - 1]}"
+    return (
+        f"{start.day} {_MONTHS_IT[start.month - 1]} - "
+        f"{end.day} {_MONTHS_IT[end.month - 1]}"
+    )
+
+
+def event_view(event: Event) -> dict[str, str]:
+    """Only what helps a PLS decide whether to act, never invented detail."""
+    where = event.city
+    if event.event_format is EventFormat.ONLINE:
+        where = "Online"
+    elif event.event_format is EventFormat.HYBRID and event.city:
+        where = f"{event.city} e online"
+
+    ecm = ""
+    if event.ecm_accredited and event.ecm_credits:
+        ecm = f"ECM {event.ecm_credits}"
+    elif event.ecm_accredited:
+        ecm = "Accreditato ECM"
+
+    return {
+        "title": event.title,
+        "when": format_event_dates(event.start_date, event.end_date),
+        "where": where,
+        "why": event.why_relevant,
+        "organiser": event.promoter or event.organiser,
+        "ecm": ecm,
+        "url": event.programme_url or event.detail_url,
+        "link_label": EVENT_LINK_LABEL,
+    }
 
 # Table-based HTML email. Email clients (Outlook in particular, which renders
 # with the Word engine) do not support flexbox, gradients, CSS counters or
@@ -257,6 +310,58 @@ a.plain, a.plain:visited { text-decoration: none; }
   </tr>
   {% endfor %}
 
+  {% if events %}
+  <!-- Upcoming events for PLS -->
+  <tr>
+    <td class="pad" style="padding:8px 40px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td style="border-top:2px solid #008484;padding-top:20px;">
+            <p class="sans" style="margin:0 0 4px;font-size:11px;font-weight:700;color:#008484;letter-spacing:1.2px;">
+              {{ events_label | upper }}
+            </p>
+            <p class="sans" style="margin:0 0 18px;font-size:12.5px;line-height:1.6;color:#6B7280;">
+              {{ events_intro }}
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% for event in events %}
+  <tr>
+    <td class="pad" style="padding:0 40px 18px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#EEF6F8" style="background-color:#EEF6F8;">
+        <tr>
+          <td style="padding:18px 20px;">
+            <p class="sans" style="margin:0 0 6px;font-size:12px;font-weight:700;color:#0F2B5B;">
+              {{ event.when }}{% if event.where %} &middot; {{ event.where }}{% endif %}
+            </p>
+            <p class="serif" style="margin:0 0 8px;font-size:16.5px;line-height:1.35;color:#0F2B5B;font-weight:600;">
+              {{ event.title }}
+            </p>
+            {% if event.why %}
+            <p class="sans" style="margin:0 0 8px;font-size:13.5px;line-height:1.65;color:#374151;">
+              {{ event.why }}
+            </p>
+            {% endif %}
+            <p class="sans" style="margin:0;font-size:12.5px;line-height:1.6;color:#6B7280;">
+              {% if event.organiser %}{{ event.organiser }}{% endif %}
+              {% if event.ecm %} &middot; {{ event.ecm }}{% endif %}
+            </p>
+            <p class="sans" style="margin:10px 0 0;font-size:13px;">
+              <a href="{{ event.url }}" target="_blank" rel="noopener noreferrer" style="color:#008484;font-weight:600;text-decoration:underline;">
+                {{ event.link_label }}
+              </a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endfor %}
+  {% endif %}
+
   <!-- Call to action -->
   <tr>
     <td class="pad" style="padding:32px 40px 36px;">
@@ -356,6 +461,7 @@ def render_html(
     logo_url: str = LOGO_URL,
     preheader: str = "",
     cta_title: str = "",
+    events: list[Event] | None = None,
 ) -> str:
     """Render the newsletter as HTML email.
 
@@ -385,6 +491,9 @@ def render_html(
         cta_subtitle=CTA_SUBTITLE,
         cta_button=CTA_BUTTON,
         cta_url=cta_url,
+        events=[event_view(e) for e in (events or [])],
+        events_label=EVENTS_LABEL,
+        events_intro=EVENTS_INTRO,
         disclaimer=DISCLAIMER,
     )
 
@@ -396,6 +505,7 @@ def render_plain_text(
     preferences_url: str = "",
     cta_url: str = CTA_URL,
     cta_title: str = "",
+    events: list[Event] | None = None,
 ) -> str:
     """Render the newsletter as plain text fallback."""
     reading_time = newsletter.reading_time_minutes or MIN_READING_MINUTES
@@ -440,6 +550,20 @@ def render_plain_text(
         if slot.access_limited:
             lines.append("   [Accesso riservato ai soci]")
         lines.append("")
+
+    if events:
+        lines.extend(["", f"--- {EVENTS_LABEL.upper()} ---", "", EVENTS_INTRO, ""])
+        for event in events:
+            view = event_view(event)
+            where = f" - {view['where']}" if view["where"] else ""
+            lines.append(f"  {view['when']}{where}: {view['title']}")
+            if view["why"]:
+                lines.append(f"    {view['why']}")
+            trailer = " - ".join(p for p in (view["organiser"], view["ecm"]) if p)
+            if trailer:
+                lines.append(f"    {trailer}")
+            lines.append(f"    {view['link_label']}: {view['url']}")
+            lines.append("")
 
     lines.extend(["", "-" * 60, cta_title or CTA_TITLE, CTA_SUBTITLE, cta_url, "", DISCLAIMER])
     if newsletter.public_url:

@@ -178,6 +178,62 @@ class ClickEventRow(Base):
     clicked_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
 
+class ResolvedEventSourceRow(Base):
+    """Where a registry row's real event listing was found, and when verified.
+
+    Discovery is expensive and mostly stable, so the resolved URL is cached and
+    re-verified rather than rediscovered every week.
+    """
+    __tablename__ = "event_sources_resolved"
+
+    source_id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    listing_url: Mapped[str] = mapped_column(Text, default="")
+    verified_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    failure_count: Mapped[int] = mapped_column(Integer, default=0)
+    needs_manual_review: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class EventRow(Base):
+    """A crawled event. Selection uses the event date, never these timestamps."""
+    __tablename__ = "events"
+
+    event_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    source_id: Mapped[str] = mapped_column(String(20), index=True)
+    title: Mapped[str] = mapped_column(Text)
+    promoter: Mapped[str] = mapped_column(String(255), default="")
+    organiser: Mapped[str] = mapped_column(String(255), default="")
+    detail_url: Mapped[str] = mapped_column(Text)
+    programme_url: Mapped[str] = mapped_column(Text, default="")
+    source_urls: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+    start_date: Mapped[datetime] = mapped_column(DateTime, index=True)
+    end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    city: Mapped[str] = mapped_column(String(120), default="")
+    region: Mapped[str] = mapped_column(String(120), default="")
+    venue: Mapped[str] = mapped_column(String(255), default="")
+    event_format: Mapped[str] = mapped_column(String(20), default="unknown")
+
+    stated_audience: Mapped[str] = mapped_column(Text, default="")
+    programme_evidence: Mapped[list[str]] = mapped_column(JSON, default=list)
+    pls_fit: Mapped[str] = mapped_column(String(20), default="unsupported", index=True)
+
+    ecm_accredited: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    ecm_credits: Mapped[str] = mapped_column(String(60), default="")
+    accredited_professions: Mapped[list[str]] = mapped_column(JSON, default=list)
+    registration_status: Mapped[str] = mapped_column(String(120), default="")
+    registration_deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    early_registration_deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    fee: Mapped[str] = mapped_column(String(120), default="")
+
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    extraction_confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    relevance_score: Mapped[float] = mapped_column(Float, default=0.0)
+    why_relevant: Mapped[str] = mapped_column(Text, default="")
+    is_national_pls_congress: Mapped[bool] = mapped_column(Boolean, default=False)
+    dedup_key: Mapped[str] = mapped_column(String(400), index=True, default="")
+
+
 class FeedbackRow(Base):
     """Per-issue reader feedback (micro-survey)."""
     __tablename__ = "feedback"

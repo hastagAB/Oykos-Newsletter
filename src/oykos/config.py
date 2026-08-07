@@ -1,6 +1,8 @@
 """Application configuration via pydantic-settings - S001."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -51,12 +53,22 @@ class Settings(BaseSettings):
     sender_email: str = ""
     recipient_emails: str = ""
 
-    # Newsletter composition (blueprint Section 5: 12 slots, 70/30 Italy/foreign)
+    # Newsletter composition. No Italy/foreign quota: the editorial feedback of
+    # 2026-08-07 requires every item to compete on relevance to PLS practice,
+    # with Italian applicability weighted inside the score instead.
     newsletter_title: str = "L'Essenziale in Pediatria"
     max_newsletter_items: int = 5
-    italy_ratio: float = Field(default=0.7, ge=0.0, le=1.0)
     min_reading_minutes: int = 3
     max_reading_minutes: int = 5
+
+    # Upcoming events for PLS (editorial feedback section 6).
+    events_enabled: bool = True
+    events_window_days: int = 30
+    max_events: int = 4
+    # 81 registry rows is too many for one weekly run; priority 1 always runs
+    # and the rest rotate.
+    max_event_sources_per_run: int = 28
+    event_registry_path: str = ""
 
     # Trigger alerts: hard events only, capped per blueprint Section 5.
     max_alerts_per_month: int = 2
@@ -143,18 +155,15 @@ class Settings(BaseSettings):
         return [e.strip() for e in self.recipient_emails.split(",") if e.strip()]
 
     @property
-    def max_italy_slots(self) -> int:
-        """Italian slots in the final newsletter (8 of 12 at the default ratio)."""
-        return round(self.max_newsletter_items * self.italy_ratio)
-
-    @property
-    def max_foreign_slots(self) -> int:
-        """Foreign transferable slots in the final newsletter (4 of 12)."""
-        return self.max_newsletter_items - self.max_italy_slots
-
-    @property
     def preferences_url(self) -> str:
         return f"{self.base_url.rstrip('/')}/preferences"
+
+    @property
+    def event_registry(self) -> str:
+        """Path to the PLS event source registry, packaged unless overridden."""
+        if self.event_registry_path:
+            return self.event_registry_path
+        return str(Path(__file__).parent / "events" / "data" / "pls_event_sources.xlsx")
 
     @property
     def archive_url(self) -> str:

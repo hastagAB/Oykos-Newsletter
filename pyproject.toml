@@ -18,6 +18,9 @@ dependencies = [
     "httpx>=0.28,<1",
     "feedparser>=6.0,<7",
     "beautifulsoup4>=4.12,<5",
+    # Programme PDFs are where events state target professions, ECM credits and
+    # registration deadlines. Reinstated 2026-08-07 per editorial feedback 6.2.
+    "pypdf>=5.1,<7",
     "jinja2>=3.1,<4",
     "python-dotenv>=1.0,<2",
     "python-json-logger>=3.1,<4",

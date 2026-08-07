@@ -2,20 +2,21 @@
 
 Up to 5 slots, but no section minimums: the editorial guidelines forbid
 stretching content to fill a fixed layout, so an issue is as long as the week
-was. Ceilings still apply, plus a 70/30 Italy/foreign split and at most 2 items
-from any single source so one society cannot dominate an issue.
+was. Two strong stories beat three average ones.
+
+Geography does not decide selection. An item earns its slot on relevance to PLS
+practice; Italian applicability is one weighted criterion inside the score, not
+a quota. The only structural cap left is at most 2 items from a single source,
+so no one society can dominate an issue.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from oykos.models.news_item import NewsItem
-from oykos.models.taxonomy import Geo, Section
+from oykos.models.taxonomy import Section
 
 MAX_TOTAL = 5
-MAX_ITALY = 4
-MAX_FOREIGN = 2
-MAX_ITALY_IN_TOP_PRIORITY = 2
 # One source dominating an issue reads as a press office, not a briefing.
 MAX_PER_SOURCE = 2
 HIGH_URGENCY = 4
@@ -33,6 +34,8 @@ SECTION_QUOTAS: dict[Section, SectionQuota] = {
     Section.REGULATORY: SectionQuota(minimum=0, maximum=1),
     Section.DEVICE: SectionQuota(minimum=0, maximum=1),
     Section.CME: SectionQuota(minimum=0, maximum=1),
+    # Events are selected by their own pipeline, never by the news ranker.
+    Section.EVENTS: SectionQuota(minimum=0, maximum=0),
 }
 
 # Section order is also the display order in the rendered newsletter.
@@ -80,16 +83,11 @@ def assign_section(item: NewsItem) -> Section:
 class _Composition:
     """Bookkeeping for the slot constraints during selection."""
 
-    def __init__(self, max_total: int, max_italy: int, max_foreign: int) -> None:
+    def __init__(self, max_total: int) -> None:
         self.max_total = max_total
-        self.max_italy = max_italy
-        self.max_foreign = max_foreign
         self.selected: list[tuple[NewsItem, Section]] = []
         self.section_counts: dict[Section, int] = dict.fromkeys(Section, 0)
         self.source_counts: dict[str, int] = {}
-        self.italy_count = 0
-        self.foreign_count = 0
-        self.italy_in_top = 0
 
     @property
     def is_full(self) -> bool:
@@ -100,37 +98,17 @@ class _Composition:
             return False
         if self.section_counts[section] >= SECTION_QUOTAS[section].maximum:
             return False
-        if self.source_counts.get(item.source.key, 0) >= MAX_PER_SOURCE:
-            return False
-
-        is_italian = item.classification.geo == Geo.IT
-        if (
-            section is Section.TOP_PRIORITY
-            and is_italian
-            and self.italy_in_top >= MAX_ITALY_IN_TOP_PRIORITY
-        ):
-            return False
-        if is_italian:
-            return self.italy_count < self.max_italy
-        return self.foreign_count < self.max_foreign
+        return self.source_counts.get(item.source.key, 0) < MAX_PER_SOURCE
 
     def take(self, item: NewsItem, section: Section) -> None:
         self.selected.append((item, section))
         self.section_counts[section] += 1
         self.source_counts[item.source.key] = self.source_counts.get(item.source.key, 0) + 1
-        if item.classification.geo == Geo.IT:
-            self.italy_count += 1
-            if section is Section.TOP_PRIORITY:
-                self.italy_in_top += 1
-        else:
-            self.foreign_count += 1
 
 
 def rank_and_select(
     candidates: list[NewsItem],
     max_total: int = MAX_TOTAL,
-    max_italy: int = MAX_ITALY,
-    max_foreign: int = MAX_FOREIGN,
 ) -> list[tuple[NewsItem, Section]]:
     """Rank candidates and select the final slots.
 
@@ -139,7 +117,7 @@ def rank_and_select(
     """
     ranked = sorted(candidates, key=lambda i: i.scoring.score_total, reverse=True)
     assignments = [(item, assign_section(item)) for item in ranked]
-    composition = _Composition(max_total, max_italy, max_foreign)
+    composition = _Composition(max_total)
     taken: set[int] = set()
 
     def consume(section_filter: Section | None = None, *, respect_minimum: bool = False) -> None:

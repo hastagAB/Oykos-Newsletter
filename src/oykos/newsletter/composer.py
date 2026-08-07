@@ -19,7 +19,7 @@ from oykos.models.news_item import (
 )
 from oykos.models.taxonomy import Geo, IssueStatus, ReviewerRole
 from oykos.processing.gates import filter_candidates
-from oykos.processing.ranker import MAX_FOREIGN, MAX_ITALY, MAX_TOTAL, rank_and_select
+from oykos.processing.ranker import MAX_TOTAL, rank_and_select
 from oykos.processing.recency import filter_to_week
 
 logger = logging.getLogger(__name__)
@@ -87,8 +87,6 @@ def compose_newsletter(
     week: str,
     title: str = "L'Essenziale in Pediatria",
     max_total: int = MAX_TOTAL,
-    max_italy: int = MAX_ITALY,
-    max_foreign: int = MAX_FOREIGN,
 ) -> Newsletter:
     """Compose a newsletter from candidate items."""
     # Blocked items never reach the reader, whatever their score.
@@ -113,12 +111,7 @@ def compose_newsletter(
         if item.editorial.headline_operational and item.editorial.what_to_do
     ]
 
-    selected = rank_and_select(
-        eligible,
-        max_total=max_total,
-        max_italy=max_italy,
-        max_foreign=max_foreign,
-    )
+    selected = rank_and_select(eligible, max_total=max_total)
 
     # An issue is 12 items; an editor reads all of them. No sampling policy.
     for item, _ in selected:
