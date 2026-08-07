@@ -18,7 +18,7 @@ from oykos.llm.classifier import classify_item
 from oykos.llm.client import LLMClient
 from oykos.models.news_item import NewsItem
 from oykos.processing.gates import evaluate_gates
-from oykos.processing.scoring import score_item
+from oykos.processing.scoring import detect_editorial_penalties, score_item
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +36,11 @@ async def classify_and_score(
     items: list[NewsItem],
     client: LLMClient,
     repo: NewsItemRepository,
+    limit: int = MAX_CLASSIFY_PER_RUN,
 ) -> list[NewsItem]:
     """Classify, score and gate a batch of items, persisting each result."""
     processed: list[NewsItem] = []
-    batch = items[:MAX_CLASSIFY_PER_RUN]
+    batch = items[:limit]
     consecutive_failures = 0
 
     for index, item in enumerate(batch, start=1):
@@ -61,6 +62,11 @@ async def classify_and_score(
         consecutive_failures = 0
         item.classification = classification
         item.scoring.subscores = subscores
+        # Audience-dependent penalties can only be judged now that the item has
+        # a setting and subscores.
+        item.scoring.penalties = list(
+            dict.fromkeys([*item.scoring.penalties, *detect_editorial_penalties(item)]),
+        )
         item.scoring = score_item(item)
         item.gating = evaluate_gates(item)
 

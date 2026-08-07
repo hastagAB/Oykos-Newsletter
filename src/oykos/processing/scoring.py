@@ -122,7 +122,7 @@ def apply_penalties(raw_score: float, penalties: list[str]) -> float:
 
 
 def detect_penalties(item: NewsItem, recent_titles: list[str] | None = None) -> list[str]:
-    """Return every noise penalty that applies to this item."""
+    """Penalties detectable from the raw item, at ingestion time."""
     text = f"{item.content.title} {item.content.raw_text}"
     penalties: list[str] = []
 
@@ -137,13 +137,24 @@ def detect_penalties(item: NewsItem, recent_titles: list[str] | None = None) -> 
         and len(item.editorial.citations) <= 1
     ):
         penalties.append(Penalty.SINGLE_SOURCE.value)
+
+    return penalties
+
+
+def detect_editorial_penalties(item: NewsItem) -> list[str]:
+    """Penalties that can only be judged once the item has been classified.
+
+    These depend on the setting and the subscores, which do not exist at
+    ingestion time, so they must be applied after classification or they never
+    fire at all.
+    """
+    penalties: list[str] = []
     if _is_hospital_only(item):
         penalties.append(Penalty.HOSPITAL_ONLY.value)
     if _is_case_report_without_implication(item):
         penalties.append(Penalty.CASE_REPORT.value)
     if _is_generic_reminder(item):
         penalties.append(Penalty.GENERIC_REMINDER.value)
-
     return penalties
 
 

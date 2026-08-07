@@ -17,15 +17,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from oykos.config import Settings
 from oykos.db.clicks import ClickRepository
-from oykos.db.repository import NewsletterRepository
+from oykos.db.repository import NewsItemRepository, NewsletterRepository
 from oykos.db.tables import Base
 from oykos.events.pipeline import events_for_issue, refresh_events
 from oykos.llm.client import LLMClient
 from oykos.models.taxonomy import IssueStatus
 from oykos.newsletter.template import event_view
 from oykos.observability.logging import setup_logging
-from oykos.pipeline.daily import run_daily_pipeline
+from oykos.pipeline.daily import classify_and_score, run_daily_pipeline
 from oykos.pipeline.weekly import run_weekly_pipeline, send_approved_issues
+from oykos.processing.scoring import detect_penalties
 
 logger = logging.getLogger("oykos.runner")
 
@@ -93,6 +94,33 @@ async def send_pending(settings: Settings | None = None) -> None:
         sent = await send_approved_issues(session, settings)
     logger.info("Delivered %d approved issue(s)", len(sent))
     await _ping_healthcheck(settings)
+
+
+async def rescore(days: int = 14, settings: Settings | None = None) -> None:
+    """Re-classify and re-score stored items with the current model.
+
+    Ingestion deduplicates, so items already in the database keep whatever
+    scores the model of the day gave them. Without this, changing the scoring
+    rules has no effect on anything already ingested.
+    """
+    settings = settings or Settings()  # type: ignore[call-arg]
+    setup_logging(settings.log_level)
+
+    async with _session_scope(settings) as session:
+        repo = NewsItemRepository(session)
+        items = await repo.get_recent(days=days)
+        logger.info("Re-scoring %d item(s) ingested in the last %d days", len(items), days)
+        # Penalties detectable from the raw item are recomputed too, so a
+        # rescore is a full refresh rather than a partial one.
+        recent_titles: list[str] = []
+        for item in items:
+            item.scoring.penalties = detect_penalties(item, recent_titles)
+            recent_titles.append(item.content.title)
+
+        processed = await classify_and_score(items, LLMClient(settings), repo, limit=len(items))
+        await session.commit()
+
+    logger.info("Re-scored %d item(s)", len(processed))
 
 
 async def print_events(offset: int = 0, settings: Settings | None = None) -> None:

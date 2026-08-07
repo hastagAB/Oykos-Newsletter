@@ -129,6 +129,18 @@ class NewsItemRepository:
         result = await self.session.execute(stmt)
         return [self._row_to_model(row) for row in result.scalars().all()]
 
+    async def get_recent(self, days: int = 14, limit: int = 400) -> list[NewsItem]:
+        """Recently ingested items, for re-scoring after a model change."""
+        cutoff = utcnow() - timedelta(days=days)
+        stmt = (
+            select(NewsItemRow)
+            .where(NewsItemRow.ingested_at >= cutoff)
+            .order_by(NewsItemRow.ingested_at.desc())
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        return [self._row_to_model(row) for row in result.scalars().all()]
+
     async def get_candidates(self, min_score: float = 0.0, limit: int = 30) -> list[NewsItem]:
         stmt = (
             select(NewsItemRow)
