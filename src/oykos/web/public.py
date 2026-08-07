@@ -140,7 +140,8 @@ LANDING_BODY = """
     <button class="btn" type="submit">Iscriviti</button>
     <p class="hint">
       Doppio opt-in: riceverai una email di conferma. Puoi annullare l'iscrizione in
-      qualsiasi momento con un clic. <a href="/archive">Guarda l'archivio</a>.
+      qualsiasi momento con un clic. <a href="/archive">Guarda l'archivio</a>
+      &middot; <a href="/privacy">Informativa privacy</a>.
     </p>
   </form>
 </div>
@@ -666,6 +667,53 @@ async def erase_data(request: Request, req: EraseRequest) -> dict[str, str]:
     if not deleted:
         raise HTTPException(status_code=404, detail="Email not found")
     return {"status": "erased", "email": req.email}
+
+
+# ── Privacy notice ────────────────────────────────────────
+
+PRIVACY_BODY = """
+<div class="card">
+  <p class="eyebrow">Informativa privacy</p>
+  <h1 style="margin:4px 0 14px">Come trattiamo i tuoi dati</h1>
+
+  <h3>Quali dati raccogliamo</h3>
+  <p>L'indirizzo email che ci fornisci al momento dell'iscrizione e, se vuoi, il
+  tuo nome. Registriamo inoltre la data del consenso e della conferma, come
+  richiesto dal GDPR.</p>
+
+  <h3>Perche' li usiamo</h3>
+  <p>Per inviarti la newsletter settimanale. Non usiamo i tuoi dati per altri
+  scopi e non li cediamo a terzi.</p>
+
+  <h3>Misurazione delle letture</h3>
+  <p>Quando la misurazione e' attiva, i link contenuti nella newsletter passano
+  da un indirizzo del nostro dominio prima di portarti alla fonte. Questo ci
+  permette di sapere quali contenuti vengono aperti e quindi di scegliere meglio
+  cosa pubblicare.</p>
+  <p><strong>Questo dato e' un dato personale</strong>: collega il tuo indirizzo
+  ai contenuti che hai scelto di leggere. Lo usiamo solo in forma aggregata per
+  decisioni editoriali, non per profilazione commerciale e non per pubblicita'.</p>
+  <p>Non usiamo pixel di tracciamento delle aperture.</p>
+
+  <h3>Per quanto tempo</h3>
+  <p>Finche' resti iscritto. Se annulli l'iscrizione i dati restano solo per
+  documentare la revoca del consenso; se chiedi la cancellazione eliminiamo
+  l'iscrizione e l'intero storico dei clic.</p>
+
+  <h3>I tuoi diritti</h3>
+  <p>Puoi annullare l'iscrizione con un clic dal fondo di ogni email. Puoi
+  chiedere accesso, rettifica o cancellazione dei tuoi dati scrivendo a
+  {{ contact }}.</p>
+</div>
+"""
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy(request: Request) -> HTMLResponse:
+    settings = get_settings(request)
+    contact = settings.resolved_sender or "info@oykomed.it"
+    body = render_fragment(PRIVACY_BODY, contact=contact)
+    return HTMLResponse(render_page("Privacy", body, width="narrow"))
 
 
 # ── Archive ───────────────────────────────────────────────

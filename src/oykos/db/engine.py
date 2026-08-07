@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from oykos.db.schema import init_schema
 from oykos.db.tables import Base
 
 __all__ = ["Base", "create_tables", "get_engine", "get_session_factory"]
@@ -23,10 +24,10 @@ def get_session_factory(database_url: str) -> async_sessionmaker[AsyncSession]:
 
 
 async def create_tables(database_url: str) -> None:
-    """Create every table declared on the ORM metadata."""
+    """Bring the schema to the current migration head."""
     engine = get_engine(database_url)
     try:
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await init_schema(conn, database_url)
     finally:
         await engine.dispose()

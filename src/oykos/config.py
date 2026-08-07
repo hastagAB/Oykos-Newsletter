@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     # 2026-08-07 requires every item to compete on relevance to PLS practice,
     # with Italian applicability weighted inside the score instead.
     newsletter_title: str = "L'Essenziale in Pediatria"
-    max_newsletter_items: int = 5
+    max_newsletter_items: int = 4
     min_reading_minutes: int = 3
     max_reading_minutes: int = 5
 
@@ -168,6 +168,10 @@ class Settings(BaseSettings):
     @property
     def archive_url(self) -> str:
         return f"{self.base_url.rstrip('/')}/archive"
+
+    @property
+    def privacy_url(self) -> str:
+        return f"{self.base_url.rstrip('/')}/privacy"
 
     @property
     def review_enabled(self) -> bool:

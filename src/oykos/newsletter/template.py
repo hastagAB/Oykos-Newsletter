@@ -403,6 +403,8 @@ a.plain, a.plain:visited { text-decoration: none; }
         <span style="color:#A9C7CD;">&nbsp;&middot;&nbsp;</span>
         <a href="{{ archive_url }}" style="color:#008484;text-decoration:none;">Archivio</a>
         <span style="color:#A9C7CD;">&nbsp;&middot;&nbsp;</span>
+        <a href="{{ privacy_url }}" style="color:#008484;text-decoration:none;">Privacy</a>
+        <span style="color:#A9C7CD;">&nbsp;&middot;&nbsp;</span>
         <a href="{{ unsubscribe_url }}" style="color:#008484;text-decoration:none;">Annulla iscrizione</a>
       </p>
       <p class="sans" style="margin:0 0 14px;font-size:11px;line-height:1.6;color:#8FA3AD;">
@@ -462,6 +464,7 @@ def render_html(
     preheader: str = "",
     cta_title: str = "",
     events: list[Event] | None = None,
+    privacy_url: str = "",
 ) -> str:
     """Render the newsletter as HTML email.
 
@@ -482,6 +485,7 @@ def render_html(
         unsubscribe_url=unsubscribe_url,
         preferences_url=preferences_url,
         archive_url=archive_url,
+        privacy_url=privacy_url or "#",
         public_url=newsletter.public_url,
         section_colors=SECTION_COLORS,
         confidence_colors=CONFIDENCE_COLORS,
@@ -506,6 +510,7 @@ def render_plain_text(
     cta_url: str = CTA_URL,
     cta_title: str = "",
     events: list[Event] | None = None,
+    privacy_url: str = "",
 ) -> str:
     """Render the newsletter as plain text fallback."""
     reading_time = newsletter.reading_time_minutes or MIN_READING_MINUTES
@@ -570,6 +575,8 @@ def render_plain_text(
         lines.append(f"Leggi online: {newsletter.public_url}")
     if preferences_url:
         lines.append(f"Preferenze: {preferences_url}")
+    if privacy_url:
+        lines.append(f"Informativa privacy: {privacy_url}")
     if unsubscribe_url:
         lines.append(f"Annulla iscrizione: {unsubscribe_url}")
 

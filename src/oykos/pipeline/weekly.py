@@ -169,6 +169,7 @@ async def deliver(
             ),
             cta_title=cta_title,
             events=events,
+            privacy_url=settings.privacy_url,
         )
         messages.append(
             OutboundMessage(
@@ -185,6 +186,7 @@ async def deliver(
                     cta_url=cta_url,
                     cta_title=cta_title,
                     events=events,
+                    privacy_url=settings.privacy_url,
                 ),
                 list_unsubscribe_url=unsubscribe_url,
             ),
@@ -362,6 +364,7 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
         cta_url=settings.cta_url,
         logo_url=settings.logo_url,
         events=events,
+        privacy_url=settings.privacy_url,
     )
     newsletter.text_content = render_plain_text(
         newsletter,
@@ -369,6 +372,7 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
         preferences_url=settings.preferences_url,
         cta_url=settings.cta_url,
         events=events,
+        privacy_url=settings.privacy_url,
     )
 
     report = compute_quality_report(shortlist, newsletter)

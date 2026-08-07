@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from oykos.config import Settings
-from oykos.db.tables import Base
+from oykos.db.schema import init_schema
 from oykos.observability.logging import setup_logging
 from oykos.web.public import router as public_router
 from oykos.web.review import router as review_router
@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     engine = create_async_engine(settings.database_url, echo=False)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await init_schema(conn, settings.database_url)
 
     app.state.settings = settings
     app.state.session_factory = async_sessionmaker(engine, expire_on_commit=False)

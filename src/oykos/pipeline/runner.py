@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from oykos.config import Settings
 from oykos.db.clicks import ClickRepository
 from oykos.db.repository import NewsItemRepository, NewsletterRepository
-from oykos.db.tables import Base
+from oykos.db.schema import init_schema
 from oykos.events.pipeline import events_for_issue, refresh_events
 from oykos.llm.client import LLMClient
 from oykos.models.taxonomy import IssueStatus
@@ -39,7 +39,7 @@ async def _session_scope(settings: Settings) -> AsyncGenerator[AsyncSession]:
     engine = create_async_engine(settings.database_url, echo=False)
     try:
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await init_schema(conn, settings.database_url)
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         async with session_factory() as session:
             yield session

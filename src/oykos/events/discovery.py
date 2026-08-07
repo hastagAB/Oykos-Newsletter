@@ -31,11 +31,15 @@ LISTING_WORDS = (
     "calendario",
     "convegni",
     "manifestazioni",
+    # Several Italian society and PCO sites label the section in English.
+    "congress",
+    "calendar",
+    "events",
 )
 
 SITEMAP_PATHS = ("/sitemap.xml", "/sitemap_index.xml", "/wp-sitemap.xml")
 MAX_SITEMAP_URLS = 3000
-MAX_CANDIDATES = 6
+MAX_CANDIDATES = 10
 
 # An archive of past editions has MORE dates than the upcoming calendar, so it
 # wins a naive date count. Observed on fimp.pro, which resolved to
@@ -53,6 +57,20 @@ ARCHIVE_WORDS = (
 # A page that announces itself as upcoming is preferred over a generic one.
 UPCOMING_WORDS = ("prossim", "calendario", "agenda", "in-programma", "futuri")
 UPCOMING_BONUS = 1.5
+
+# Tried when link and sitemap inspection find nothing, which happens when the
+# navigation is rendered client side. Several Italian society sites answer 200
+# to any path, so a candidate still has to prove itself on the date count.
+CONVENTIONAL_PATHS = (
+    "/eventi",
+    "/eventi/",
+    "/congressi",
+    "/formazione",
+    "/corsi",
+    "/appuntamenti",
+    "/agenda",
+    "/calendario",
+)
 
 # A listing page shows several dates. One date is an article about an event.
 MIN_DATES_FOR_LISTING = 2
@@ -148,6 +166,14 @@ async def discover_listing_url(
             if sitemap:
                 candidates.extend(candidates_from_sitemap(sitemap, domain))
                 break
+
+    if not candidates:
+        root = f"{urlparse(start_url).scheme}://{urlparse(start_url).netloc}"
+        candidates.extend(f"{root}{path}" for path in CONVENTIONAL_PATHS)
+
+    # Some societies list their events on the front page. It is judged on dates
+    # like any other candidate, so this cannot smuggle in a news homepage.
+    candidates.append(start_url)
 
     best_url = ""
     best_rank = 0.0
