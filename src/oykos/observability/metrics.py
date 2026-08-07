@@ -14,8 +14,9 @@ from oykos.models.taxonomy import Confidence, Geo, TaxonomyTag
 
 logger = logging.getLogger(__name__)
 
-TARGET_ITALY_RATIO = 0.7
-ITALY_RATIO_TOLERANCE = 0.1
+# The Italy ratio is observed, not targeted. Since the 2026-08-07 editorial
+# feedback every item competes on relevance to PLS practice, so a low Italian
+# share means international evidence won slots, which is the intended outcome.
 MAX_LOW_CONFIDENCE = 3
 
 # Core areas that should be represented in every issue when material exists.
@@ -148,10 +149,6 @@ def compute_quality_report(
         if slot.editorial.review.needs_human_review:
             report.needs_review_count += 1
 
-    if abs(report.italy_ratio - TARGET_ITALY_RATIO) > ITALY_RATIO_TOLERANCE:
-        report.issues.append(
-            f"Italy ratio {report.italy_ratio:.0%} is off the 70/30 target",
-        )
     if report.low_confidence_count > MAX_LOW_CONFIDENCE:
         report.issues.append(f"{report.low_confidence_count} items with low confidence")
     # A thin week is a correct outcome, not a defect: the guidelines put recency

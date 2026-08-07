@@ -59,18 +59,29 @@ Operational changes that affect affiliated PLS in those regions.
 | `acta_paed` | Acta Paediatrica | rss | https://rss.onlinelibrary.wiley.com/feed/16512227/most-recent | 3 |
 | `eap` | European Academy of Paediatrics | rss | https://www.eapaediatrics.eu/feed/ | 4 |
 
-## Tier 3 - Global (Conditional Transferability)
+## Tier 3 - Global
 
 | Key | Name | Type | URL | Reliability |
 |-----|------|------|-----|-------------|
-| `aap_guidelines` | AAP Clinical Practice Guidelines | scrape | https://publications.aap.org/collection/523/Clinical-Practice-Guidelines | 3 |
-| `aap_news` | AAP News | rss | https://publications.aap.org/rss/site_154/48.xml | 3 |
-| `jama_ped` | JAMA Pediatrics | rss | https://jamanetwork.com/rss/site_16/116.xml | 3 |
-| `lancet_child` | Lancet Child & Adolescent Health | rss | https://www.thelancet.com/rssfeed/lanchi_current.xml | 3 |
+| `aap_guidelines` | AAP Clinical Practice Guidelines | scrape | https://publications.aap.org/collection/523/Clinical-Practice-Guidelines | 4 |
+| `europe_pmc` | Europe PMC - Pediatric Evidence | api | https://www.ebi.ac.uk/europepmc/webservices/rest/search | 4 |
+| `lancet_child` | Lancet Child & Adolescent Health | rss | https://www.thelancet.com/rssfeed/lanchi_current.xml | 4 |
 | `bmc_ped` | BMC Pediatrics | rss | https://bmcpediatr.biomedcentral.com/articles/most-recent/rss.xml | 3 |
 | `ped_research` | Pediatric Research | rss | https://www.nature.com/pr.rss | 3 |
-| `who` | WHO Publications | scrape | https://www.who.int/ | 5 |
+| `who_news` | WHO News | rss | https://www.who.int/rss-feeds/news-english.xml | 5 |
 | `nice_guidance` | NICE Guidance | scrape | https://www.nice.org.uk/guidance/published?ndt=Guidance | 3 |
+
+### Why Pediatrics and JAMA Pediatrics arrive through Europe PMC
+
+Verified 2026-08-07: `publications.aap.org` returns 403 to automated clients
+and the AAP News and JAMA Pediatrics feeds return 404. Rather than keep dead
+URLs in the registry, the peer-reviewed literature the editorial feedback asks
+for comes through Europe PMC, which indexes the same journals and serves a
+documented REST API.
+
+`oykos.ingestion.evidence` queries a named journal list restricted to the last
+21 days and drops records without an abstract: a headline alone cannot be
+judged. Results are classified and scored like any other candidate.
 
 ### Tier 3 - High-impact research and AI in clinical practice
 
@@ -87,9 +98,16 @@ These are backed by two taxonomy tags added at the same time:
 `TaxonomyTag.RESEARCH_EVIDENCE` and `TaxonomyTag.AI_DIGITAL_HEALTH`. Items
 tagged `ai_digital_health` route to the Device/Test section.
 
-Being Tier 3 with reliability 3, they still have to clear all three selection
-gates and carry the foreign transferability discount, so they compete for the
-four foreign slots rather than displacing Italian institutional material.
+Being Tier 3, they still have to clear all three selection gates and compete on
+relevance to PLS practice. There is no foreign discount and no foreign slot
+quota: an international item wins a slot when it is more useful to a PLS than
+the domestic alternatives.
+
+## Event sources (separate registry)
+
+The "Prossimi appuntamenti per il PLS" section does not use this registry. It
+is driven by `src/oykos/events/data/pls_event_sources.xlsx`, 81 monitored
+sources maintained by the editorial team. See `docs/events.md`.
 
 ## Radar tier (Secondary - Triangulation Only)
 

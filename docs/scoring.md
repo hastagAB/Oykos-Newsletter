@@ -1,40 +1,45 @@
 # Scoring Engine Reference
 
-## Weighted Dimensions (0-100 scale)
+Audience fit is evaluated before source geography. The reader is a Pediatra di
+Libera Scelta running an outpatient practice in the territory, not a hospital
+pediatrician. A clinically sound story aimed at a hospital team is the wrong
+story, however authoritative the source.
 
-Each dimension scored 0-5, then weighted and summed to produce a raw score.
+## Weighted criteria (0-100 scale)
 
-| # | Dimension | Weight | Operational Definition |
+The five criteria from the editorial feedback of 2026-08-07.
+
+| # | Criterion | Weight | Operational Definition |
 |---|-----------|--------|----------------------|
-| 1 | PLS Relevance | 22% | Impact on typical outpatient/triage decision |
-| 2 | Clinical/Safety Impact | 18% | Reduces clinical risk or changes management |
-| 3 | Operational Impact | 15% | Changes workflow, timing, communication, fulfillment |
-| 4 | Source Reliability | 15% | Institutional/society/primary vs secondary |
-| 5 | Novelty | 10% | New compared to knowledge base + last 4 weeks |
-| 6 | Actionability | 10% | "What to do tomorrow": check, avoid, adopt, explain |
-| 7 | Urgency | 10% | Expires, is seasonal, or impacts immediately |
+| 1 | PLS practice relevance | 35% | Affects patients, decisions, counselling, follow up or workflow in primary care |
+| 2 | Actionability | 25% | The reader can tell what to consider or do differently |
+| 3 | Source authority | 15% | Scientifically or institutionally strong, judged on authority alone |
+| 4 | Freshness | 15% | Genuinely new for a weekly newsletter |
+| 5 | Italian applicability | 10% | The evidence transfers to Italian PLS practice |
+
+Criterion 1 is measured by three subscores blended 60/20/20 across
+`pls_relevance`, `operational_impact` and `clinical_impact`, because "affects
+decisions, counselling or workflow" is what those three measure together.
 
 ### Score calculation
 ```
-raw_score = sum(subscore_i * weight_i) * (100 / 5)
-# e.g. all 5s = (5*0.22 + 5*0.18 + 5*0.15 + 5*0.15 + 5*0.10 + 5*0.10 + 5*0.10) * 20 = 100
+raw_score = sum(criterion_i * weight_i) * (100 / 5)
 ```
 
-### Transferability multiplier (foreign items only)
-```
-final_score = penalized_score * transferability
-```
+Italian applicability is a weighted criterion and **nothing else**. It used to be
+applied twice, once here and again as a multiplier on the total, which
+double-discounted every foreign item and is what let source geography outrank
+audience fit.
 
-Implemented in `oykos.processing.scoring.compute_transferability`:
+The value is judged by the classifier and stored in `Subscores.transferability`.
+`oykos.processing.scoring.default_applicability` is a deterministic fallback for
+items scored before the criterion existed.
 
-| Band | Value | Applies to |
-|------|-------|-----------|
-| EU regulatory | 0.95 | Source key contains `ema`, `ecdc`, `who`, `eu_` |
-| EU guideline | 0.85 | `Geo.EU` with a guideline/consensus/safety/surveillance document type |
-| Portable evidence | 0.75 | `Geo.EU` otherwise, or a US/UK guideline from a trusted source |
-| System dependent | 0.65 | US/UK material tied to their own reimbursement pathway |
+### No geography quota
 
-Italian items are always 1.0. The value is stored in `Subscores.transferability`.
+There is no Italy/foreign split. `rank_and_select` caps only how many items may
+come from a single source (2), so no society can dominate an issue. An
+international item can fill every slot if it earns them.
 
 ---
 
@@ -77,16 +82,25 @@ section to route them into - see [deviations.md](deviations.md).
   claims) is excluded from candidate queries entirely.
 
 ### Noise penalties (applied to raw_score)
-| Penalty | Points | Trigger |
-|---------|--------|---------|
-| Duplicate | -10 | Title similarity >= 0.75 against recent titles |
-| Paywall | -10 | Content unverifiable behind a paywall |
-| Press release | -20 | PR copy with no figures to check |
-| Single source | -5 | Reliability tier < 3 with at most one citation |
+| Penalty | Points | Trigger | Stage |
+|---------|--------|---------|-------|
+| Duplicate | -10 | Title similarity >= 0.75 against recent titles | ingest |
+| Paywall | -10 | Content unverifiable behind a paywall | ingest |
+| Press release | -20 | PR copy with no figures to check | ingest |
+| Single source | -5 | Reliability tier < 3 with at most one citation | ingest |
+| Hospital only | -25 | `setting=hospital` with no realistic PLS use case | after classification |
+| Case report | -15 | A single case with no practice implication | after classification |
+| Generic reminder | -12 | Educational recap of settled practice | after classification |
 
-Detected by `oykos.processing.scoring.detect_penalties`, called from the daily
-ingestion orchestrator. (It used to live in `processing/penalties.py`; that
-module is gone.)
+Two stages, and the distinction matters. `detect_penalties` runs during
+ingestion and can only read the raw item. `detect_editorial_penalties` runs in
+`classify_and_score` because the audience penalties need a judged `setting` and
+real subscores; evaluated at ingestion they would always see zeros and could
+never fire.
+
+Changing any of this only affects items ingested afterwards. Ingestion
+deduplicates, so stored items keep the scores the model of the day gave them.
+Run `oykos rescore --days N` to re-judge the backlog.
 
 ### The two title-similarity thresholds
 
@@ -122,11 +136,13 @@ remaining budget by score up to each maximum.
 | Device / Test | 1 | 2 |
 | CME / Events | 1 | 2 |
 
-- **Italy/abroad ratio**: 8 Italian slots / 4 foreign slots. These are hard
-  caps. There is no relaxation pass: a thin week produces a shorter issue rather
-  than a lopsided or padded one.
-- **Top 3**: at most 2 Italian items (`MAX_ITALY_IN_TOP_PRIORITY`), so the
-  section is never all-domestic.
+- **No Italy/abroad ratio.** Geography does not decide selection. Italian
+  applicability is one weighted criterion inside the score.
+- **At most 2 items per source** (`MAX_PER_SOURCE`), so one society cannot
+  dominate an issue.
+- **No section minimums.** Two strong stories beat three average ones, and the
+  system must be willing to discard weak content for "what really changes this
+  week" to stay credible.
 - **Editorial headroom**: the weekly pipeline shortlists 3 items beyond the
   final budget, so an item blocked by verification does not shorten the issue.
 - **Minimum coverage**: the quality report flags any core area (clinical,
