@@ -61,6 +61,8 @@ addopts = "-q --tb=short"
 target-version = "py312"
 src = ["src", "tests"]
 line-length = 100
+# Alembic generates these; they live under src only so they ship in the wheel.
+extend-exclude = ["src/oykos/migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "S", "B", "A", "C4", "DTZ", "T20", "ICN", "PIE", "PT", "RSE", "RET", "SLF", "SIM", "TID", "ARG", "PTH", "ERA"]
@@ -92,6 +94,7 @@ typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
 include = ["src"]
+exclude = ["src/oykos/migrations"]
 # Pydantic's `Field(default_factory=list)` and the untyped feedparser/bs4 APIs
 # make strict mode report "partially unknown" types on declarations that are
 # already explicitly annotated. Everything else in strict stays on.

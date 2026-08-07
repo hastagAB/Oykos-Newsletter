@@ -31,9 +31,17 @@ SENTINEL_TABLE = "news_items"
 
 
 def _alembic_config(database_url: str) -> Config:
-    root = Path(__file__).resolve().parents[3]
-    config = Config(str(root / "alembic.ini"))
-    config.set_main_option("script_location", str(root / "migrations"))
+    """Alembic configuration that works from a checkout and from a wheel.
+
+    The migrations live inside the package rather than at the repository root,
+    because the installed container has no repository: the first attempt looked
+    for /usr/local/lib/python3.12/migrations and failed.
+    """
+    config = Config()
+    config.set_main_option(
+        "script_location",
+        str(Path(__file__).resolve().parent.parent / "migrations"),
+    )
     config.set_main_option("sqlalchemy.url", database_url)
     return config
 
