@@ -35,7 +35,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("ingest", help="Daily ingestion, classification and alerts")
-    sub.add_parser("compose", help="Weekly composition, queued for editorial review")
+    compose = sub.add_parser("compose", help="Weekly composition, queued for editorial review")
+    compose.add_argument(
+        "--rewrite",
+        action="store_true",
+        help="Regenerate editorial copy that was already written, after a rules change",
+    )
     sub.add_parser("send", help="Deliver approved issues")
     sub.add_parser("run", help="Daily ingestion followed by weekly composition")
     sub.add_parser("check-smtp", help="Verify the SMTP connection without sending")
@@ -121,7 +126,7 @@ def cli() -> None:
     if args.command == "ingest":
         asyncio.run(run_daily())
     elif args.command == "compose":
-        asyncio.run(run_weekly())
+        asyncio.run(run_weekly(rewrite=getattr(args, "rewrite", False)))
     elif args.command == "send":
         asyncio.run(send_pending())
     else:

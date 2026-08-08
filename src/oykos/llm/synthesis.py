@@ -51,8 +51,10 @@ Rules:
   NOT "Ex very preterm: spirometria da considerare se sintomatici".
 - why_it_matters: one or two sentences. First what the source adds, then where
   it can be relevant in family pediatrics. Do NOT deduce consequences the source
-  does not support. Do NOT open with the automatic formula
-  "In pratica, questo significa" when what follows is your own inference.
+  does not support.
+  FORBIDDEN PHRASE: never write "In pratica, questo significa". It is a filler
+  formula that turns an observation into an instruction. Write what the source
+  shows, then where it may matter, in plain clinical language.
 - implication_kind: choose honestly from
   * changes_practice - a guideline or institutional instruction that really changes something
   * worth_attention  - consolidated evidence that reinforces attention to something
@@ -74,6 +76,8 @@ LANGUAGE MUST MATCH THE STRENGTH OF THE EVIDENCE:
 - Observational study: describe the association and its possible relevance.
   Do not turn it into a clinical indication. Prefer wordings that keep the
   uncertainty ("si associa a", "e' stata osservata", "potrebbe essere rilevante").
+  For an observational study implication_kind may be AT MOST may_consider, and
+  the title must not contain a recommendation.
 - Preliminary or single study: present it as something to know or follow.
 - Incomplete or inaccessible document: make no recommendation at all.
 

@@ -75,13 +75,22 @@ async def build_editorial(
     candidates: list[NewsItem],
     client: LLMClient,
     repo: NewsItemRepository,
+    *,
+    rewrite: bool = False,
 ) -> None:
     """Extract evidence, synthesise and verify, in place.
 
     Only called with items that already survived gating and ranking, so no LLM
     budget is spent writing copy for items that will not ship.
+
+    Copy already written is reused, which means a change to the editorial rules
+    has no effect on it. Pass ``rewrite`` to regenerate it.
     """
-    pending = [c for c in candidates if not c.editorial.headline_operational]
+    pending = (
+        list(candidates)
+        if rewrite
+        else [c for c in candidates if not c.editorial.headline_operational]
+    )
     corroborating = {c.source.key for c in candidates}
 
     for index, item in enumerate(pending, start=1):
@@ -283,7 +292,12 @@ async def deliver_and_finalize(
     return True
 
 
-async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> Newsletter | None:
+async def run_weekly_pipeline(
+    session: AsyncSession,
+    settings: Settings,
+    *,
+    rewrite: bool = False,
+) -> Newsletter | None:
     """Compose, review-gate and deliver the weekly issue."""
     week = current_week()
     logger.info("=== Weekly pipeline: %s ===", week)
@@ -317,7 +331,7 @@ async def run_weekly_pipeline(session: AsyncSession, settings: Settings) -> News
     ]
     logger.info("%d candidates shortlisted for editorial", len(shortlist))
 
-    await build_editorial(shortlist, client, repo)
+    await build_editorial(shortlist, client, repo, rewrite=rewrite)
     await session.commit()
 
     newsletter = compose_newsletter(

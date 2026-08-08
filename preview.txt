@@ -11,7 +11,7 @@ COSA CAMBIA DAVVERO QUESTA SETTIMANA
 
 1. Desogestrel/etonogestrel: ricontrollare meningioma in anamnesi prima di prescrivere
    In pratica: Va aggiunta un’attenzione specifica su anamnesi e sorveglianza clinica nelle adolescenti che usano questi contraccettivi. In pratica, questo significa considerare il meningioma come rischio raro ma da tenere presente soprattutto nell’uso corrente e prolungato di almeno 1 anno.
-   Cosa fare ora:
+   Merita attenzione:
      1. Ricontrolla, prima di prescrivere o rinnovare desogestrel o etonogestrel, l’anamnesi di meningioma e i segni/sintomi suggestivi da monitorare durante l’uso.
    La NIIS AIFA del 6 agosto 2026 segnala per desogestrel ed etonogestrel un lieve aumento del rischio di meningioma associato all’uso corrente e prolungato, definito come almeno 1 anno. Nelle donne con meningioma o anamnesi di meningioma questi medicinali non vanno utilizzati; in caso di diagnosi il trattamento va interrotto. Le informazioni di prodotto saranno aggiornate includendo il meningioma tra gli effetti indesiderati.
    "La comunicazione informa in merito ai risultati di recenti evidenze epidemiologiche che hanno evidenziato un lieve aumento del rischio di meningioma associato all’uso corrente e prolungato (≥1 anno) di tali medicinali" - AIFA Safety Communications
@@ -24,7 +24,7 @@ COSA CAMBIA DAVVERO QUESTA SETTIMANA
 
 2. Ex very preterm in età prescolare: spirometria da considerare se sintomatici o a rischio
    In pratica: Una quota non piccola di ex very preterm in età prescolare può avere alterazioni spirometriche con maggiore risposta al broncodilatatore. In pratica, questo significa tenere più bassa la soglia per rivalutare funzione respiratoria e storia perinatale nei bambini con sintomi respiratori ricorrenti.
-   Cosa fare ora:
+   Merita attenzione:
      1. Ricontrolla nei nati molto pretermine con sintomi respiratori ricorrenti la storia perinatale e familiare (ventilazione invasiva, glucocorticoidi postnatali, atopia) per orientare l'eventuale invio a spirometria.
    Fonti:
      - Frontiers in Pediatrics: https://www.frontiersin.org/articles/10.3389/fped.2026.1837119
@@ -36,7 +36,7 @@ COSA CAMBIA DAVVERO QUESTA SETTIMANA
 Selezionati per la pediatria di famiglia. Date e sedi come indicate dall'organizzatore.
 
   1-4 ottobre - Napoli: 20° Congresso Nazionale Scientifico FIMP
-    È dedicato al Pediatra di Famiglia e ai temi di cura, sviluppo e sostegno alla genitorialità nell’attività territoriale.
+    Approfondisce temi centrali della pediatria di famiglia, dalla cura allo sviluppo e al sostegno della genitorialità.
     FIMP
     Programma e iscrizione: https://www.fimp.pro/eventi/eventi-in-presenza/prossimi-eventi
 

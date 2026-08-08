@@ -14,6 +14,10 @@ from oykos.models.taxonomy import Confidence, Geo, TaxonomyTag
 
 logger = logging.getLogger(__name__)
 
+# Editorial guidelines v2.0 section 6: filler that turns an observation into an
+# instruction. The model reaches for it, so the report names it for the editor.
+BANNED_FORMULAS = ("In pratica, questo significa",)
+
 # The Italy ratio is observed, not targeted. Since the 2026-08-07 editorial
 # feedback every item competes on relevance to PLS practice, so a low Italian
 # share means international evidence won slots, which is the intended outcome.
@@ -148,6 +152,9 @@ def compute_quality_report(
             report.low_confidence_count += 1
         if slot.editorial.review.needs_human_review:
             report.needs_review_count += 1
+        for phrase in BANNED_FORMULAS:
+            if phrase.lower() in slot.editorial.why_it_matters.lower():
+                report.issues.append(f'Formula deprecata "{phrase}" nel testo {slot.position}')
 
     if report.low_confidence_count > MAX_LOW_CONFIDENCE:
         report.issues.append(f"{report.low_confidence_count} items with low confidence")
