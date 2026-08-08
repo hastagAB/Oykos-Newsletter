@@ -331,6 +331,23 @@ class NewsletterRepository:
         self.session = session
 
     async def save(self, newsletter: Newsletter) -> None:
+        """Store an issue, replacing any unsent draft for the same week.
+
+        Recomposing used to append a new row each time, so seven drafts of the
+        same week accumulated and the archive showed duplicates. A week has one
+        issue until it is sent; a sent issue is never overwritten.
+        """
+        existing = (
+            await self.session.execute(
+                select(NewsletterRow).where(
+                    NewsletterRow.week == newsletter.week,
+                    NewsletterRow.status != IssueStatus.SENT.value,
+                ),
+            )
+        ).scalars().all()
+        for stale in existing:
+            await self.session.delete(stale)
+
         row = NewsletterRow(
             issue_id=str(newsletter.issue_id),
             week=newsletter.week,
