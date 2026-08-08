@@ -56,6 +56,9 @@ class NewsItemRow(Base):
     headline_operational: Mapped[str] = mapped_column(Text, default="")
     why_it_matters: Mapped[str] = mapped_column(Text, default="")
     what_to_do: Mapped[list[str]] = mapped_column(JSON, default=list)
+    implication_kind: Mapped[str] = mapped_column(
+        String(30), default="worth_attention", server_default="worth_attention",
+    )
     summary: Mapped[str] = mapped_column(Text, default="")
     confidence: Mapped[str] = mapped_column(String(10), default="low")
     citations: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)

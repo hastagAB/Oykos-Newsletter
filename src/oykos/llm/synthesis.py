@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from oykos.llm.client import LLMClient
 from oykos.models.news_item import Citation, EditorialBlock, NewsItem
-from oykos.models.taxonomy import Confidence
+from oykos.models.taxonomy import Confidence, ImplicationKind
 
 logger = logging.getLogger(__name__)
 
@@ -21,46 +21,77 @@ SOURCE_NOTE_MAX_CHARS = 140
 MAX_ACTIONS = 1
 MAX_FALLBACK_SUMMARY_CHARS = 500
 
+# Conclusions that are complete without an action.
+NO_ACTION_KINDS = frozenset({ImplicationKind.NO_CHANGE, ImplicationKind.INSUFFICIENT})
+
 SYNTHESIS_SYSTEM = f"""You are the clinical curator of an Italian pediatric
 newsletter, writing for Pediatri di Libera Scelta. You have already read and
 assessed the source; return only what is useful.
 
-Voice: a very well prepared colleague. Competent, collegial, operational, sober.
-Never put the reader under scrutiny. Never manufacture urgency or curiosity.
+THE CENTRAL RULE. The sequence is NOT "new evidence, therefore the pediatrician
+must do something". It is: what the source shows, how much it matters for a PLS,
+and what actually changes - IF anything changes.
 
-Every item answers: what changed, why it matters in practice, what to do now.
+Deciding that nothing changes is a complete and valuable editorial conclusion.
+Never invent an action because the layout has a space for one.
+
+Voice: a reliable curator of clinical information, not a doctor issuing orders.
+Competent, collegial, contextual, sober. Never manufacture urgency. Never claim
+more certainty than the source carries.
 
 Rules:
 - Write in Italian with correct accents: perche', piu', gia', cio', eta', e'
   must be written perch\u00e9, pi\u00f9, gi\u00e0, ci\u00f2, et\u00e0, \u00e8.
-- headline_operational: a CONCLUDING title, max {HEADLINE_MAX_CHARS} characters, that
-  already carries the consequence. Do not merely announce that a document exists.
-  Good: "Attacco acuto d'asma: per ora non cambiare la pratica".
-  Bad: "SICuPP pubblica un aggiornamento sull'asma".
-- why_it_matters: one or two sentences on why this touches a PLS's practice.
-  Open with the consequence, not the background, not with who published it.
-  Write "In pratica, questo significa..." rather than "Per il PLS conta perche'...".
-- what_to_do: EXACTLY ONE priority action, proportionate to how solid and how
-  accessible the source is. Use concrete verbs - consultare, confrontare,
-  ricontrollare, mantenere - always naming what must be checked.
-  Never audit the reader. Write "Ricontrolla questi due aspetti della gestione",
-  never "Verifica se le tue pratiche sono allineate".
+- headline_operational: max {HEADLINE_MAX_CHARS} characters. Informative before
+  catchy. It must describe WHAT WE KNOW, and may carry a consequence only when
+  the source genuinely supports one. Never put a recommendation in the title
+  that the source does not contain.
+  For an observational study showing an association, write
+  "Ex very preterm: frequenti alterazioni spirometriche in eta' prescolare",
+  NOT "Ex very preterm: spirometria da considerare se sintomatici".
+- why_it_matters: one or two sentences. First what the source adds, then where
+  it can be relevant in family pediatrics. Do NOT deduce consequences the source
+  does not support. Do NOT open with the automatic formula
+  "In pratica, questo significa" when what follows is your own inference.
+- implication_kind: choose honestly from
+  * changes_practice - a guideline or institutional instruction that really changes something
+  * worth_attention  - consolidated evidence that reinforces attention to something
+  * may_consider     - it may be useful to bear in mind in certain situations
+  * no_change        - interesting, but does not by itself modify practice
+  * insufficient     - the evidence does not yet allow operational indications
+- what_to_do: AT MOST ONE short practical implication, and ONLY when
+  implication_kind is changes_practice, worth_attention or may_consider.
+  Leave it EMPTY for no_change and insufficient.
+  Imperatives such as ricontrolla, invia, modifica, mantieni, monitora and
+  prescrivi require a source that justifies them: use them for guidelines and
+  institutional documents, not for a single observational study.
+  Never audit the reader ("Verifica se le tue pratiche sono allineate").
+
+LANGUAGE MUST MATCH THE STRENGTH OF THE EVIDENCE:
+- Guideline or clear institutional instruction: a direct operational wording is allowed.
+- Systematic review or consolidated evidence: clinical implications allowed, with
+  their limits and population stated.
+- Observational study: describe the association and its possible relevance.
+  Do not turn it into a clinical indication. Prefer wordings that keep the
+  uncertainty ("si associa a", "e' stata osservata", "potrebbe essere rilevante").
+- Preliminary or single study: present it as something to know or follow.
+- Incomplete or inaccessible document: make no recommendation at all.
+
 - summary: 2 to 5 lines giving what the reader needs to decide whether to go
   deeper. Specifics over adjectives: ages, doses, dates, thresholds. No filler
   openers. Do not restate the headline or why_it_matters in other words.
 - source_note: max {SOURCE_NOTE_MAX_CHARS} characters naming what kind of source this is and
-  what it does NOT let you conclude, for example "Documento istituzionale. Testo
-  integrale non accessibile." Never write a bare reliability grade.
+  what it does NOT let you conclude, for example "Studio osservazionale. Mostra
+  associazioni, non consente indicazioni operative." Never a bare grade.
 - Ground every claim in the numbered EVIDENCE passages. Cite the passage number
   in supporting_passage_ref (for example "P2").
-- Keep separate what the source states and what you infer. Never attribute a
-  recommendation to a source whose full text you have not read.
+- Keep separate what the source states, what may be relevant for a PLS, and what
+  follows in practice. Never attribute a recommendation to a source whose full
+  text you have not read. Never turn an association into causality.
 - If ACCESS LIMITED is true this is a document notice, not a clinical
-  recommendation. Say plainly that the full text is reserved to members, draw
-  NO clinical conclusion from it, and make the single action about consulting
-  the document if the reader has access, otherwise keeping current practice
-  until a complete source is available. The headline must not imply a change
-  in practice.
+  recommendation. Say plainly that the full text is reserved, set
+  implication_kind to insufficient, leave what_to_do empty, and make sure the
+  headline does not imply a change in practice.
 - Never write a therapeutic protocol unless the source is a national guideline
   or consensus document."""
 
@@ -74,6 +105,7 @@ class SynthesisCitation(BaseModel):
 class SynthesisResponse(BaseModel):
     headline_operational: str
     why_it_matters: str
+    implication_kind: ImplicationKind = ImplicationKind.WORTH_ATTENTION
     what_to_do: list[str] = Field(default_factory=list)
     summary: str
     source_note: str = ""
@@ -116,6 +148,7 @@ EVIDENCE (quote these, do not invent):
         return EditorialBlock(
             headline_operational=item.content.title[:HEADLINE_MAX_CHARS],
             summary=item.content.raw_text[:MAX_FALLBACK_SUMMARY_CHARS],
+            implication_kind=ImplicationKind.INSUFFICIENT,
             confidence=Confidence.LOW,
         )
 
@@ -140,10 +173,16 @@ EVIDENCE (quote these, do not invent):
         if c.claim_id
     ]
 
+    actions = [a.strip() for a in resp.what_to_do if a.strip()][:MAX_ACTIONS]
+    # A conclusion of "nothing changes" must not arrive with an action attached.
+    if resp.implication_kind in NO_ACTION_KINDS:
+        actions = []
+
     return EditorialBlock(
         headline_operational=resp.headline_operational.strip()[:HEADLINE_MAX_CHARS],
         why_it_matters=resp.why_it_matters.strip(),
-        what_to_do=[a.strip() for a in resp.what_to_do if a.strip()][:MAX_ACTIONS],
+        implication_kind=resp.implication_kind,
+        what_to_do=actions,
         summary=resp.summary.strip(),
         source_note=resp.source_note.strip()[:SOURCE_NOTE_MAX_CHARS],
         confidence=confidence,

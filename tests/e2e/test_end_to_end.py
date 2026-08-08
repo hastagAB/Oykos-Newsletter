@@ -234,7 +234,8 @@ def test_rendered_issue_has_every_blueprint_block(items, settings) -> None:
     )
 
     assert "Cosa cambia davvero questa settimana" in html
-    assert "Cosa fare ora" in html
+    # v2.0 labels the implication by what the source justifies.
+    assert "Merita attenzione" in html
     assert "Fonti" in html
     assert "Annulla iscrizione" in html
     assert "Informazione professionale destinata a medici" in html

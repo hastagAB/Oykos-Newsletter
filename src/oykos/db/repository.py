@@ -29,6 +29,7 @@ from oykos.models.taxonomy import (
     DocumentType,
     ExclusionReason,
     Geo,
+    ImplicationKind,
     IssueStatus,
     Setting,
     TaxonomyTag,
@@ -81,6 +82,7 @@ class NewsItemRepository:
             headline_operational=item.editorial.headline_operational,
             why_it_matters=item.editorial.why_it_matters,
             what_to_do=item.editorial.what_to_do,
+            implication_kind=item.editorial.implication_kind.value,
             summary=item.editorial.summary,
             confidence=item.editorial.confidence.value,
             citations=[c.model_dump() for c in item.editorial.citations],
@@ -247,6 +249,7 @@ class NewsItemRepository:
             row.headline_operational = editorial.headline_operational
             row.why_it_matters = editorial.why_it_matters
             row.what_to_do = editorial.what_to_do
+            row.implication_kind = editorial.implication_kind.value
             row.summary = editorial.summary
             row.confidence = editorial.confidence.value
             row.citations = [c.model_dump() for c in editorial.citations]
@@ -298,6 +301,9 @@ class NewsItemRepository:
                 headline_operational=row.headline_operational,
                 why_it_matters=row.why_it_matters,
                 what_to_do=row.what_to_do if row.what_to_do else [],
+                implication_kind=ImplicationKind(
+                    row.implication_kind or ImplicationKind.WORTH_ATTENTION.value,
+                ),
                 summary=row.summary,
                 confidence=Confidence(row.confidence) if row.confidence else Confidence.LOW,
                 citations=[Citation(**c) for c in (row.citations or [])],

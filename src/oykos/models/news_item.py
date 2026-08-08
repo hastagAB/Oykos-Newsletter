@@ -11,6 +11,7 @@ from oykos.models.taxonomy import (
     DocumentType,
     ExclusionReason,
     Geo,
+    ImplicationKind,
     IssueStatus,
     Section,
     Setting,
@@ -101,6 +102,9 @@ class EditorialBlock(BaseModel):
     headline_operational: str = ""
     why_it_matters: str = ""
     what_to_do: list[str] = Field(default_factory=list)
+    # What the source actually justifies. An item with no action is a valid
+    # outcome, so this is what the template renders, not the presence of text.
+    implication_kind: ImplicationKind = ImplicationKind.WORTH_ATTENTION
     summary: str = ""
     # What kind of source this is and what it does not let us conclude. Shown to
     # the reader in place of a bare confidence grade.

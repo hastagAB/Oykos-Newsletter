@@ -105,11 +105,10 @@ def compose_newsletter(
             len(eligible), before_recency, week,
         )
 
-    # An item without a headline and actions has no 5-block template to render.
-    eligible = [
-        item for item in eligible
-        if item.editorial.headline_operational and item.editorial.what_to_do
-    ]
+    # A headline is required to render the item. An action is NOT: "il dato e'
+    # interessante, ma non modifica da solo la pratica" is a valid conclusion,
+    # and requiring what_to_do here would silently delete exactly those items.
+    eligible = [item for item in eligible if item.editorial.headline_operational]
 
     selected = rank_and_select(eligible, max_total=max_total)
 

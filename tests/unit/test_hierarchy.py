@@ -113,10 +113,15 @@ def test_secondary_items_stay_compact() -> None:
     assert SECONDARY_SUMMARY not in text
 
 
-def test_every_item_keeps_title_consequence_and_action() -> None:
+def test_every_item_keeps_its_title_and_implication() -> None:
+    """v2.0: the implication is labelled by what the source justifies.
+
+    An action is no longer mandatory, so the label is what is asserted rather
+    than a fixed "Cosa fare ora" heading.
+    """
     html, _ = _issue()
 
     assert "Titolo conclusivo drug_safety" in html
     assert "Titolo conclusivo vaccinations" in html
     assert html.count("Ricontrolla i due aspetti indicati") == 2
-    assert "Cosa fare ora" in html
+    assert "Merita attenzione" in html

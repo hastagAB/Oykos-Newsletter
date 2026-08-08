@@ -229,7 +229,9 @@ def test_html_renders_the_five_blocks() -> None:
 
     assert "Verificare i lotti interessati" in html          # 1 headline
     assert "Riduce il rischio clinico" in html                # 2 why it matters
-    assert "Cosa fare ora" in html                            # 3 the single action
+    # 3 the implication, labelled by what the source justifies rather than by a
+    # standing "Cosa fare ora" that invites an invented action.
+    assert "Merita attenzione" in html
     assert "Dettaglio clinico e operativo" in html            # 4 detail
     assert "Fonti" in html                                    # 5 sources
 

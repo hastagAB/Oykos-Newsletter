@@ -238,7 +238,7 @@ a.plain, a.plain:visited { text-decoration: none; }
 
             {% if slot.editorial.what_to_do %}
             <p class="sans" style="margin:0 0 9px;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#8B95A3;font-weight:700;">
-              Cosa fare ora
+              {{ implication_labels.get(slot.editorial.implication_kind.value, 'Implicazione pratica') }}
             </p>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 16px;">
               {% for action in slot.editorial.what_to_do %}
@@ -247,6 +247,13 @@ a.plain, a.plain:visited { text-decoration: none; }
                 <td valign="top" class="sans" style="padding:4px 0 4px 12px;font-size:14.5px;line-height:1.6;color:#1E293B;font-weight:600;">{{ action }}</td>
               </tr>
               {% endfor %}
+            </table>
+            {% elif no_change_notes.get(slot.editorial.implication_kind.value) %}
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 16px;">
+              <tr>
+                <td valign="top" style="width:3px;" bgcolor="#A9C7CD">&nbsp;</td>
+                <td valign="top" class="sans" style="padding:4px 0 4px 12px;font-size:14px;line-height:1.6;color:#64748B;font-style:italic;">{{ no_change_notes.get(slot.editorial.implication_kind.value) }}</td>
+              </tr>
             </table>
             {% endif %}
 
@@ -430,6 +437,20 @@ SECTION_LABELS = {
     "cme": "Formazione ECM ed eventi",
 }
 
+# The label reflects what the source justifies, so the section is never a
+# standing invitation to invent an action.
+IMPLICATION_LABELS = {
+    "changes_practice": "Cosa cambia",
+    "worth_attention": "Merita attenzione",
+    "may_consider": "Può essere utile considerare",
+}
+
+# Shown instead of an action when the honest conclusion is that nothing changes.
+NO_CHANGE_NOTES = {
+    "no_change": "Il dato è interessante, ma non modifica da solo la pratica.",
+    "insufficient": "Al momento le evidenze non consentono indicazioni operative.",
+}
+
 SECTION_COLORS = {
     "top_priority": BRAND_RUST,
     "clinical": BRAND_TEAL,
@@ -479,6 +500,8 @@ def render_html(
         week=newsletter.week,
         slots=newsletter.slots,
         section_labels=SECTION_LABELS,
+        implication_labels=IMPLICATION_LABELS,
+        no_change_notes=NO_CHANGE_NOTES,
         tldr=newsletter.tldr,
         preheader=preheader or newsletter.preheader,
         reading_time=newsletter.reading_time_minutes or MIN_READING_MINUTES,
@@ -536,8 +559,14 @@ def render_plain_text(
         if ed.why_it_matters:
             lines.append(f"   In pratica: {ed.why_it_matters}")
         if ed.what_to_do:
-            lines.append("   Cosa fare ora:")
+            lines.append(
+                "   "
+                + IMPLICATION_LABELS.get(ed.implication_kind.value, "Implicazione pratica")
+                + ":",
+            )
             lines.extend(f"     {i}. {action}" for i, action in enumerate(ed.what_to_do, 1))
+        elif NO_CHANGE_NOTES.get(ed.implication_kind.value):
+            lines.append(f"   {NO_CHANGE_NOTES[ed.implication_kind.value]}")
         # Only the week's priority gets the extended treatment.
         if slot.position == 1 and ed.summary:
             lines.append(f"   {ed.summary}")

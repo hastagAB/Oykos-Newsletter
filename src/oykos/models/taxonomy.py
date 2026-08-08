@@ -49,6 +49,21 @@ class Section(str, Enum):
     EVENTS = "events"
 
 
+class ImplicationKind(str, Enum):
+    """What a source actually justifies (editorial guidelines v2.0, section 5).
+
+    "L'assenza di un'azione immediata e' una conclusione editoriale
+    perfettamente valida": NO_CHANGE and INSUFFICIENT are conclusions, not
+    failures to find one.
+    """
+
+    CHANGES_PRACTICE = "changes_practice"
+    WORTH_ATTENTION = "worth_attention"
+    MAY_CONSIDER = "may_consider"
+    NO_CHANGE = "no_change"
+    INSUFFICIENT = "insufficient"
+
+
 class Penalty(str, Enum):
     """Noise penalties from docs/scoring.md."""
 
