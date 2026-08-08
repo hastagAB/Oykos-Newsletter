@@ -42,6 +42,16 @@ Check each item and report every violation you find:
 3. IMPERATIVES. Verbs addressing the pediatrician - ricontrolla, invia,
    modifica, mantieni, monitora, prescrivi, tieni, abbassa la soglia - require
    a source that justifies them. Flag every one that does not.
+   These conclusions are EXPLICITLY PERMITTED by the guidelines and must NOT be
+   flagged, whatever the source: "Il dato rafforza l'attenzione verso ...",
+   "Puo' essere utile tenerne conto quando ...", "E' un elemento da considerare
+   soprattutto in ...", "Il dato e' interessante, ma non modifica da solo la
+   pratica", "Al momento non emergono indicazioni operative", "L'evidenza non e'
+   sufficiente per modificare la gestione". They are contextualisation, not
+   instruction.
+   An institutional source - a regulator, a national society, a guideline - MAY
+   carry operational measures. Reporting what AIFA instructs is not the
+   newsletter over-claiming.
 4. AUTOMATIC FORMULAS. "In pratica, questo significa", "Cosa fare ora", and any
    phrasing that exists to fill a section rather than to say something.
 5. INTERNAL CONSISTENCY. Does the item describe the source prudently and then

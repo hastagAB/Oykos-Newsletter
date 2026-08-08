@@ -64,6 +64,27 @@ def _is_directive(text: str) -> bool:
     return bool(_DIRECTIVE_VERB.match(text.strip()))
 
 
+# Section 10 lists the conclusions a non-institutional source may carry. Anything
+# else - including impersonal steering like "Da tenere presente nel follow-up" -
+# reads as an instruction the evidence does not support.
+_SANCTIONED_OPENING = re.compile(
+    r"^\s*(?:"
+    r"il\s+dato\s+rafforza\s+l['’]attenzione"
+    r"|può\s+essere\s+utile\s+tenerne\s+conto"
+    r"|è\s+un\s+elemento\s+da\s+considerare"
+    r"|il\s+dato\s+è\s+interessante"
+    r"|al\s+momento\s+non\s+emergono"
+    r"|l['’]evidenza\s+non\s+è\s+sufficiente"
+    r"|questo\s+aggiornamento\s+modifica"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _is_sanctioned_conclusion(text: str) -> bool:
+    return bool(_SANCTIONED_OPENING.match(text))
+
+
 def rules_version() -> str:
     """Fingerprint of the editorial rules that produced a piece of copy.
 
@@ -115,9 +136,20 @@ Rules:
 - what_to_do: AT MOST ONE short practical implication, and ONLY when
   implication_kind is changes_practice, worth_attention or may_consider.
   Leave it EMPTY for no_change and insufficient.
-  Imperatives such as ricontrolla, invia, modifica, mantieni, monitora and
-  prescrivi require a source that justifies them: use them for guidelines and
-  institutional documents, not for a single observational study.
+
+  IF THE SOURCE IS NOT A GUIDELINE OR AN INSTITUTIONAL DOCUMENT, the implication
+  must begin with one of these exact forms and nothing else:
+    "Il dato rafforza l'attenzione verso ..."
+    "Puo' essere utile tenerne conto quando ..."
+    "E' un elemento da considerare soprattutto in ..."
+  Anything else is dropped. In particular do NOT write "Da tenere presente
+  nel ...", "Tema da tenere presente ...", "Utile ricordare ...": these steer
+  behaviour without naming anyone, and an observational study does not support
+  steering behaviour.
+
+  For a guideline or institutional document you may write a direct operational
+  sentence. Imperatives such as ricontrolla, invia, modifica, mantieni,
+  monitora and prescrivi belong here and nowhere else.
   Never audit the reader ("Verifica se le tue pratiche sono allineate").
 
 LANGUAGE MUST MATCH THE STRENGTH OF THE EVIDENCE:
@@ -241,9 +273,15 @@ EVIDENCE (quote these, do not invent):
     if not directive_allowed:
         if kind is ImplicationKind.CHANGES_PRACTICE:
             kind = ImplicationKind.MAY_CONSIDER
-        if actions and _is_directive(actions[0]):
+        # A non-institutional source may only conclude in one of the forms the
+        # guidelines list, and may not open with an imperative. "Da tenere
+        # presente nel follow-up" steers behaviour without addressing anyone,
+        # so it slipped past the verb check on its own.
+        if actions and (
+            not _is_sanctioned_conclusion(actions[0]) or _is_directive(actions[0])
+        ):
             logger.info(
-                "Dropped directive action on a non-institutional source: %.60s",
+                "Dropped unsanctioned implication on a non-institutional source: %.60s",
                 actions[0],
             )
             actions = []
