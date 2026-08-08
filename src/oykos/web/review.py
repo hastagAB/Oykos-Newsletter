@@ -271,7 +271,7 @@ WORKBENCH_BODY = """
   </p>
 
   {% if n.tldr %}
-  <h2>Cosa cambia davvero questa settimana</h2>
+  <h2>Che cosa merita attenzione questa settimana</h2>
   <ul>{% for line in n.tldr %}<li>{{ line }}</li>{% endfor %}</ul>
   {% endif %}
 </div>

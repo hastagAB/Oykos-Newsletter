@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from oykos.llm.client import LLMClient
 from oykos.models.news_item import Newsletter
+from oykos.models.taxonomy import ImplicationKind
 
 logger = logging.getLogger(__name__)
 
@@ -21,27 +22,47 @@ PREHEADER_MAX_CHARS = 120
 CTA_TITLE_MAX_CHARS = 90
 TOP_ITEMS_FOR_SUBJECT = 3
 
-SUBJECT_SYSTEM = f"""You write subject lines for a weekly operational briefing read by
+# Told to the subject writer so it cannot promise more than the issue delivers.
+IMPLICATION_SUMMARY = {
+    "changes_practice": "cambia la pratica",
+    "worth_attention": "merita attenzione",
+    "may_consider": "puo' essere utile considerare",
+    "no_change": "non cambia la pratica",
+    "insufficient": "evidenze non sufficienti",
+}
+
+SUBJECT_SYSTEM = f"""You write subject lines for a weekly briefing read by
 Italian pediatricians of free choice (PLS).
+
+The subject must not promise more than the issue delivers. Most weeks the
+contents are things worth knowing, not changes in practice. A subject like
+"cosa cambia ora" over an issue of observational studies is a false promise and
+primes the reader to expect instructions.
+
+You are told what each item actually concludes. Let that govern the subject:
+- If nothing in the issue changes practice, do NOT use "cosa cambia", "cosa
+  fare", "ora", "subito" or any other operational framing. Name the topics and
+  the kind of knowledge they add.
+- Only when an item genuinely changes practice may the subject say so.
 
 Rules:
 - Write in Italian, with correct accents.
 - Maximum {SUBJECT_MAX_CHARS} characters for the subject.
-- Name the topics and the consequence, leaving one useful question open.
-  Interest must come from clinical relevance, never from withholding information.
-  Good: "Asma, influenza, epilessia: cosa cambia davvero".
-  Also good: "Attacco acuto d'asma: cosa non cambiare questa settimana".
+- Informative before catchy. Interest comes from clinical relevance, never from
+  alarm or artificial curiosity.
+  Good for an issue of observations:
+  "Schermi e sonno, spirometria nei pretermine: i dati della settimana".
+  Good when something really changes:
+  "Nuove misure AIFA: cosa cambia nella prescrizione".
 - Never clickbait, no emoji, no ALL CAPS, no manufactured urgency.
 - Never audit the reader: no "Hai visto...", no "Le tue pratiche sono allineate...".
-- preheader: up to {PREHEADER_MAX_CHARS} characters anticipating the benefit of
-  reading, complementing the subject rather than repeating it. For example
-  "Tre aggiornamenti per il PLS, due verifiche utili e un documento da non
-  modificare".
+- preheader: up to {PREHEADER_MAX_CHARS} characters anticipating what the reader
+  will find, complementing the subject rather than repeating it. Same rule: do
+  not promise actions the issue does not contain.
 - subject_variant_b: a second subject line taking a genuinely different angle on
-  the same content - for instance the clinical consequence where the first is
-  operational. Same rules and same length limit. It must not be a paraphrase.
+  the same content. Same rules and same length limit. Not a paraphrase.
 - preheader_variant_b: a second preheader, same rules and length limit, opening
-  on a different benefit from the first. It must not be a paraphrase.
+  on a different aspect from the first. Not a paraphrase.
 - cta_variant_b: an alternative wording for the closing call to action shown
   above the button, up to {CTA_TITLE_MAX_CHARS} characters. It promotes the
   Oykos product, so it must promise a working benefit and must never make a
@@ -97,17 +118,26 @@ async def generate_subject_line(
 ) -> SubjectLines:
     """Generate the subject, preheader and one B candidate per testable element."""
     top_items = [
-        slot.editorial.headline_operational
+        f"{slot.editorial.headline_operational} "
+        f"[conclusione: {IMPLICATION_SUMMARY.get(slot.editorial.implication_kind.value, '')}]"
         for slot in newsletter.slots[:TOP_ITEMS_FOR_SUBJECT]
         if slot.editorial.headline_operational
     ]
     if not top_items:
         return _fallback(newsletter)
 
+    changes_practice = any(
+        slot.editorial.implication_kind is ImplicationKind.CHANGES_PRACTICE
+        for slot in newsletter.slots
+    )
+
     prompt = f"""Write the subject line for this week's briefing ({newsletter.week}).
 
-Top stories:
+Top stories, each with what it actually concludes:
 {chr(10).join(f'- {t}' for t in top_items)}
+
+Does anything in this issue genuinely change practice? {"YES" if changes_practice else "NO"}
+{"" if changes_practice else "Because nothing changes practice, operational framing is forbidden."}
 
 The issue has {len(newsletter.slots)} items and takes about
 {newsletter.reading_time_minutes} minutes to read.

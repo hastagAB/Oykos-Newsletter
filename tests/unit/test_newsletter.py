@@ -258,7 +258,7 @@ def test_html_includes_header_furniture_and_disclaimer() -> None:
     )
 
     assert "Anteprima della settimana" in html
-    assert "Cosa cambia davvero questa settimana" in html
+    assert "Che cosa merita attenzione questa settimana" in html
     assert "lettura" in html
     assert "https://x.it/u" in html
     assert "https://x.it/p" in html
@@ -279,7 +279,7 @@ def test_plain_text_contains_detail_sources_and_disclaimer() -> None:
     newsletter = compose_newsletter(_full_candidate_pool(), WEEK)
     text = render_plain_text(newsletter, unsubscribe_url="https://x.it/u")
 
-    assert "COSA CAMBIA DAVVERO QUESTA SETTIMANA" in text
+    assert "CHE COSA MERITA ATTENZIONE QUESTA SETTIMANA" in text
     assert "Dettaglio clinico e operativo" in text
     assert "Fonti:" in text
     assert DISCLAIMER[:40] in text

@@ -1,0 +1,36 @@
+2026-W32
+subject:   Meningioma, sonno, spirometria: cosa cambia ora
+preheader: Quattro punti in 6 minuti: rischio da NIIS, schermo e sonno, follow-up respiratorio nei pretermine
+
+TLDR:
+  - AIFA segnala un lieve aumento del rischio di meningioma con uso corrente e prolungato (≥1 anno) di desogestrel ed etonogestrel e comunica misure di minimizzazione del rischio. È soprattutto un aggiornamento di sicurezza rilevante per adolescenti che utilizzano contraccettivi progestinici e per la raccolta dell’anamnesi neurologica.
+  - Questo studio trasversale segnala un'associazione indipendente tra esposizione prolungata agli schermi, uso dei media all'addormentamento e maggior prevalenza di disturbi del sonno nei bambini di 4-5 anni. Può essere rilevante quando in ambulatorio emergono sonnolenza diurna, difficoltà di addormentamento o routine serali con dispositivi.
+  - Questo studio osservazionale descrive che, nei bambini nati very preterm valutati intorno ai 5 anni, sono frequenti anomalie spirometriche con maggiore responsività al broncodilatatore. Può essere rilevante nel follow-up dei prescolari ex pretermine con storia respiratoria significativa o familiarità atopica.
+
+[top_priority]  kind=no_change
+  titolo:  AIFA: NIIS su desogestrel/etonogestrel e rischio di meningioma
+  fonte:   AIFA Safety Communications
+  perche:  AIFA segnala un lieve aumento del rischio di meningioma con uso corrente e prolungato (≥1 anno) di desogestrel ed etonogestrel e comunica misure di minimizzazione del rischio. È soprattutto un aggiornamento di sicurezza 
+  azione:  (NESSUNA)
+  nota:    Comunicazione di sicurezza AIFA. Introduce misure di minimizzazione del rischio e aggiornamenti delle informazioni di prodotto.
+
+[clinical]  kind=no_change
+  titolo:  Prescolari: più tempo di schermo associato a più disturbi del sonno
+  fonte:   European journal of pediatrics
+  perche:  Questo studio trasversale segnala un'associazione indipendente tra esposizione prolungata agli schermi, uso dei media all'addormentamento e maggior prevalenza di disturbi del sonno nei bambini di 4-5 anni. Può essere ril
+  azione:  (NESSUNA)
+  nota:    Studio osservazionale trasversale. Mostra associazioni, non consente indicazioni causali o operative da solo.
+
+[clinical]  kind=may_consider
+  titolo:  Ex very preterm: frequenti alterazioni spirometriche in età prescolare
+  fonte:   Frontiers in Pediatrics
+  perche:  Questo studio osservazionale descrive che, nei bambini nati very preterm valutati intorno ai 5 anni, sono frequenti anomalie spirometriche con maggiore responsività al broncodilatatore. Può essere rilevante nel follow-up
+  azione:  Da tenere presente nel follow-up respiratorio dei prescolari ex very preterm, soprattutto se con infezioni ricorrenti o familiarità atopica.
+  nota:    Studio osservazionale di coorte. Mostra associazioni, non consente indicazioni operative o causali.
+
+[cme]  kind=may_consider
+  titolo:  Cure LGBTQ+: buoni atteggiamenti, minore preparazione clinica dichiarata
+  fonte:   Archives of disease in childhood
+  perche:  Questo studio internazionale descrive un divario tra atteggiamenti favorevoli e preparazione clinica percepita, soprattutto nell’assistenza a minori transgender e gender-diverse. Può essere rilevante per leggere bisogni 
+  azione:  Tema da tenere presente quando si programmano formazione e contesti di cura inclusivi.
+  nota:    Studio osservazionale con questionario. Descrive percezioni e gap formativi, non consente indicazioni operative dirette.

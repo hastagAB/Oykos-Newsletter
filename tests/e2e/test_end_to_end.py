@@ -233,7 +233,7 @@ def test_rendered_issue_has_every_blueprint_block(items, settings) -> None:
         preferences_url="https://oykos.example.it/preferences/tok",
     )
 
-    assert "Cosa cambia davvero questa settimana" in html
+    assert "Che cosa merita attenzione questa settimana" in html
     # v2.0 labels the implication by what the source justifies.
     assert "Merita attenzione" in html
     assert "Fonti" in html

@@ -173,7 +173,7 @@ def test_workbench_shows_items_and_review_reasons(signed_in: TestClient) -> None
     assert response.status_code == 200
     assert "Titolo operativo 1" in response.text
     assert "top priority" in response.text
-    assert "Cosa cambia davvero" in response.text
+    assert "Che cosa merita attenzione" in response.text
 
 
 def test_workbench_404s_for_an_unknown_week(signed_in: TestClient) -> None:

@@ -35,6 +35,11 @@ DIRECTIVE_DOCUMENT_TYPES = frozenset({
     DocumentType.LEGAL_UPDATE,
 })
 
+# A regulator speaks with institutional authority whatever the classifier called
+# the page. Without this an AIFA safety notice was demoted to "non modifica la
+# pratica", which understates a real safety signal.
+INSTITUTIONAL_RELIABILITY = 5
+
 # Kinds a study may not claim: an observational finding is not a change in practice.
 STUDY_MAX_KINDS = frozenset({
     ImplicationKind.MAY_CONSIDER,
@@ -229,7 +234,10 @@ EVIDENCE (quote these, do not invent):
     # Section 7, enforced rather than requested. A study describes; it does not
     # instruct. The model keeps reaching for an imperative, so the rule lives
     # here where wording cannot get around it.
-    directive_allowed = item.content.document_type in DIRECTIVE_DOCUMENT_TYPES
+    directive_allowed = (
+        item.content.document_type in DIRECTIVE_DOCUMENT_TYPES
+        or item.source.reliability_tier >= INSTITUTIONAL_RELIABILITY
+    )
     if not directive_allowed:
         if kind is ImplicationKind.CHANGES_PRACTICE:
             kind = ImplicationKind.MAY_CONSIDER

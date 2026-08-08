@@ -155,7 +155,7 @@ a.plain, a.plain:visited { text-decoration: none; }
   <tr>
     <td class="pad" bgcolor="#EEF6F8" style="background-color:#EEF6F8;padding:24px 40px;border-bottom:1px solid #D6E8EC;">
       <p class="sans" style="margin:0 0 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#006B6B;font-weight:700;">
-        Cosa cambia davvero questa settimana
+        Che cosa merita attenzione questa settimana
       </p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         {% for line in tldr %}
@@ -544,7 +544,7 @@ def render_plain_text(
     ]
 
     if newsletter.tldr:
-        lines.extend(["", "COSA CAMBIA DAVVERO QUESTA SETTIMANA", ""])
+        lines.extend(["", "CHE COSA MERITA ATTENZIONE QUESTA SETTIMANA", ""])
         lines.extend(f"  - {line}" for line in newsletter.tldr)
 
     current_section = ""
