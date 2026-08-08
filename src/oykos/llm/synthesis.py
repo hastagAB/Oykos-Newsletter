@@ -6,13 +6,15 @@ its only input: claims must be traceable to a numbered passage.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
+import re
 
 from pydantic import BaseModel, Field
 
 from oykos.llm.client import LLMClient
 from oykos.models.news_item import Citation, EditorialBlock, NewsItem
-from oykos.models.taxonomy import Confidence, ImplicationKind
+from oykos.models.taxonomy import Confidence, DocumentType, ImplicationKind
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,50 @@ MAX_FALLBACK_SUMMARY_CHARS = 500
 
 # Conclusions that are complete without an action.
 NO_ACTION_KINDS = frozenset({ImplicationKind.NO_CHANGE, ImplicationKind.INSUFFICIENT})
+
+# Section 7: only a guideline or a clear institutional instruction justifies a
+# direct operational formulation. Everything else describes, it does not direct.
+DIRECTIVE_DOCUMENT_TYPES = frozenset({
+    DocumentType.GUIDELINE,
+    DocumentType.CONSENSUS,
+    DocumentType.SAFETY_COMMUNICATION,
+    DocumentType.LEGAL_UPDATE,
+})
+
+# Kinds a study may not claim: an observational finding is not a change in practice.
+STUDY_MAX_KINDS = frozenset({
+    ImplicationKind.MAY_CONSIDER,
+    ImplicationKind.NO_CHANGE,
+    ImplicationKind.INSUFFICIENT,
+})
+
+# Verbs that address the pediatrician directly, in imperative or infinitive.
+# The editorial feedback of 2026-08-08 objected to exactly these.
+_DIRECTIVE_VERB = re.compile(
+    # Both stems where Italian changes them: mantenere -> mantieni, tenere -> tieni.
+    r"\b(?:non\s+)?(?:ricontroll|controll|verific|invi|modific|manten|mantien|"
+    r"monitor|prescriv|tien|tenere|consider|valut|applic|adott|utilizz|"
+    r"us(?:a|are|ando)|riduc|abbass|alz|aument|segnal|ricord|inform|chied|"
+    r"esegu)\w*\b",
+    re.IGNORECASE,
+)
+
+
+def _is_directive(text: str) -> bool:
+    """Whether the text tells the reader to do something."""
+    return bool(_DIRECTIVE_VERB.match(text.strip()))
+
+
+def rules_version() -> str:
+    """Fingerprint of the editorial rules that produced a piece of copy.
+
+    Editorial copy is cached, so changing the guidelines used to leave the
+    published text untouched until someone remembered to force a rewrite. That
+    was missed three times. Copy now carries the fingerprint of the rules that
+    wrote it, and anything stale is regenerated without being asked.
+    """
+    material = SYNTHESIS_SYSTEM + "|".join(sorted(k.value for k in ImplicationKind))
+    return hashlib.sha256(material.encode()).hexdigest()[:12]
 
 SYNTHESIS_SYSTEM = f"""You are the clinical curator of an Italian pediatric
 newsletter, writing for Pediatri di Libera Scelta. You have already read and
@@ -178,15 +224,36 @@ EVIDENCE (quote these, do not invent):
     ]
 
     actions = [a.strip() for a in resp.what_to_do if a.strip()][:MAX_ACTIONS]
+    kind = resp.implication_kind
+
+    # Section 7, enforced rather than requested. A study describes; it does not
+    # instruct. The model keeps reaching for an imperative, so the rule lives
+    # here where wording cannot get around it.
+    directive_allowed = item.content.document_type in DIRECTIVE_DOCUMENT_TYPES
+    if not directive_allowed:
+        if kind is ImplicationKind.CHANGES_PRACTICE:
+            kind = ImplicationKind.MAY_CONSIDER
+        if actions and _is_directive(actions[0]):
+            logger.info(
+                "Dropped directive action on a non-institutional source: %.60s",
+                actions[0],
+            )
+            actions = []
+            kind = ImplicationKind.NO_CHANGE
+
+    if item.content.document_type is DocumentType.STUDY and kind not in STUDY_MAX_KINDS:
+        kind = ImplicationKind.MAY_CONSIDER
+
     # A conclusion of "nothing changes" must not arrive with an action attached.
-    if resp.implication_kind in NO_ACTION_KINDS:
+    if kind in NO_ACTION_KINDS:
         actions = []
 
     return EditorialBlock(
         headline_operational=resp.headline_operational.strip()[:HEADLINE_MAX_CHARS],
         why_it_matters=resp.why_it_matters.strip(),
-        implication_kind=resp.implication_kind,
+        implication_kind=kind,
         what_to_do=actions,
+        rules_version=rules_version(),
         summary=resp.summary.strip(),
         source_note=resp.source_note.strip()[:SOURCE_NOTE_MAX_CHARS],
         confidence=confidence,

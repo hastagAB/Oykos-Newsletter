@@ -21,6 +21,7 @@ from oykos.db.repository import NewsItemRepository, NewsletterRepository
 from oykos.db.schema import init_schema
 from oykos.events.pipeline import events_for_issue, refresh_events
 from oykos.llm.client import LLMClient
+from oykos.llm.editorial_qa import audit_issue
 from oykos.models.taxonomy import IssueStatus
 from oykos.newsletter.template import event_view
 from oykos.observability.logging import setup_logging
@@ -121,6 +122,38 @@ async def rescore(days: int = 14, settings: Settings | None = None) -> None:
         await session.commit()
 
     logger.info("Re-scored %d item(s)", len(processed))
+
+
+async def print_qa(week: str | None = None, settings: Settings | None = None) -> None:
+    """Audit an issue against the editorial guidelines and print the findings."""
+    settings = settings or Settings()  # type: ignore[call-arg]
+    setup_logging(settings.log_level)
+
+    async with _session_scope(settings) as session:
+        repo = NewsletterRepository(session)
+        issue = await repo.get_by_week(week) if week else None
+        if issue is None:
+            for status in (IssueStatus.IN_REVIEW, IssueStatus.APPROVED, IssueStatus.SENT):
+                found = await repo.list_by_status(status)
+                if found:
+                    issue = found[0]
+                    break
+        if issue is None:
+            print("Nessun numero da controllare")  # noqa: T201
+            return
+        report = await audit_issue(issue, LLMClient(settings))
+
+    print(f"\n{issue.week}  verdetto: {report.verdict}")  # noqa: T201
+    print(f"  articoli senza azione: {report.items_without_action}/{len(issue.slots)}")  # noqa: T201
+    if report.summary:
+        print(f"  {report.summary}")  # noqa: T201
+    for finding in report.findings:
+        print(f"\n  [{finding.rule}] {finding.item_title}")  # noqa: T201
+        print(f"    testo:    {finding.offending_text}")  # noqa: T201
+        print(f"    problema: {finding.why}")  # noqa: T201
+        if finding.suggested_rewrite:
+            print(f"    proposta: {finding.suggested_rewrite}")  # noqa: T201
+    print()  # noqa: T201
 
 
 async def print_events(offset: int = 0, settings: Settings | None = None) -> None:

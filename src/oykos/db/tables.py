@@ -59,6 +59,7 @@ class NewsItemRow(Base):
     implication_kind: Mapped[str] = mapped_column(
         String(30), default="worth_attention", server_default="worth_attention",
     )
+    rules_version: Mapped[str] = mapped_column(String(20), default="", server_default="")
     summary: Mapped[str] = mapped_column(Text, default="")
     confidence: Mapped[str] = mapped_column(String(10), default="low")
     citations: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)

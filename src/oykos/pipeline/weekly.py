@@ -26,8 +26,9 @@ from oykos.delivery.wordpress import publish_issue
 from oykos.events.models import Event
 from oykos.events.pipeline import events_for_issue, refresh_events
 from oykos.llm.client import LLMClient
+from oykos.llm.editorial_qa import audit_issue
 from oykos.llm.extraction import attach_key_passages
-from oykos.llm.synthesis import synthesize_editorial
+from oykos.llm.synthesis import rules_version, synthesize_editorial
 from oykos.llm.verification import cross_source_support, verify_claims
 from oykos.models.news_item import NewsItem, Newsletter
 from oykos.models.taxonomy import Confidence, IssueStatus
@@ -83,14 +84,25 @@ async def build_editorial(
     Only called with items that already survived gating and ranking, so no LLM
     budget is spent writing copy for items that will not ship.
 
-    Copy already written is reused, which means a change to the editorial rules
-    has no effect on it. Pass ``rewrite`` to regenerate it.
+    Copy written under older editorial rules is regenerated automatically: it
+    carries the fingerprint of the rules that produced it. ``rewrite`` forces
+    everything, for when the source data rather than the rules has changed.
     """
-    pending = (
-        list(candidates)
+    current = rules_version()
+    pending = [
+        c
+        for c in candidates
         if rewrite
-        else [c for c in candidates if not c.editorial.headline_operational]
+        or not c.editorial.headline_operational
+        or c.editorial.rules_version != current
+    ]
+    stale = sum(
+        1
+        for c in pending
+        if c.editorial.headline_operational and c.editorial.rules_version != current
     )
+    if stale:
+        logger.info("Rewriting %d item(s) written under older editorial rules", stale)
     corroborating = {c.source.key for c in candidates}
 
     for index, item in enumerate(pending, start=1):
@@ -392,6 +404,13 @@ async def run_weekly_pipeline(
     report = compute_quality_report(shortlist, newsletter)
     for issue in report.issues:
         logger.warning("Quality issue: %s", issue)
+
+    # Audit against the editorial guidelines before a human ever sees it.
+    qa = await audit_issue(newsletter, client)
+    if not qa.passed:
+        logger.warning(
+            "Editorial QA: %s - %s", qa.verdict, qa.summary or "see findings above",
+        )
 
     # Risk-based human review gate: high-risk items must be signed off first.
     awaiting = [

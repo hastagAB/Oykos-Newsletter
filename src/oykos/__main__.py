@@ -51,6 +51,8 @@ def _build_parser() -> argparse.ArgumentParser:
     events.add_argument("--offset", type=int, default=0, help="Rotate which sources are crawled")
     rescore_cmd = sub.add_parser("rescore", help="Re-score stored items with the current model")
     rescore_cmd.add_argument("--days", type=int, default=14, help="How far back to re-score")
+    qa_cmd = sub.add_parser("qa", help="Audit an issue against the editorial guidelines")
+    qa_cmd.add_argument("week", nargs="?", help="ISO week, e.g. 2026-W32. Defaults to latest.")
 
     serve = sub.add_parser("serve", help="Start the web server")
     serve.add_argument("--host", default="127.0.0.1", help="Bind host")
@@ -98,6 +100,12 @@ def cli() -> None:
         from oykos.pipeline.runner import print_events  # noqa: PLC0415
 
         asyncio.run(print_events(getattr(args, "offset", 0)))
+        sys.exit(0)
+
+    if args.command == "qa":
+        from oykos.pipeline.runner import print_qa  # noqa: PLC0415
+
+        asyncio.run(print_qa(getattr(args, "week", None)))
         sys.exit(0)
 
     if args.command == "rescore":

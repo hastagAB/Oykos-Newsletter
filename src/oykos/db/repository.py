@@ -83,6 +83,7 @@ class NewsItemRepository:
             why_it_matters=item.editorial.why_it_matters,
             what_to_do=item.editorial.what_to_do,
             implication_kind=item.editorial.implication_kind.value,
+            rules_version=item.editorial.rules_version,
             summary=item.editorial.summary,
             confidence=item.editorial.confidence.value,
             citations=[c.model_dump() for c in item.editorial.citations],
@@ -250,6 +251,7 @@ class NewsItemRepository:
             row.why_it_matters = editorial.why_it_matters
             row.what_to_do = editorial.what_to_do
             row.implication_kind = editorial.implication_kind.value
+            row.rules_version = editorial.rules_version
             row.summary = editorial.summary
             row.confidence = editorial.confidence.value
             row.citations = [c.model_dump() for c in editorial.citations]
@@ -304,6 +306,7 @@ class NewsItemRepository:
                 implication_kind=ImplicationKind(
                     row.implication_kind or ImplicationKind.WORTH_ATTENTION.value,
                 ),
+                rules_version=row.rules_version or "",
                 summary=row.summary,
                 confidence=Confidence(row.confidence) if row.confidence else Confidence.LOW,
                 citations=[Citation(**c) for c in (row.citations or [])],

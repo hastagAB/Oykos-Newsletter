@@ -105,6 +105,9 @@ class EditorialBlock(BaseModel):
     # What the source actually justifies. An item with no action is a valid
     # outcome, so this is what the template renders, not the presence of text.
     implication_kind: ImplicationKind = ImplicationKind.WORTH_ATTENTION
+    # Fingerprint of the editorial rules that wrote this copy, so a rules change
+    # invalidates it automatically instead of relying on someone remembering.
+    rules_version: str = ""
     summary: str = ""
     # What kind of source this is and what it does not let us conclude. Shown to
     # the reader in place of a bare confidence grade.

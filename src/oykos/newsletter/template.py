@@ -28,7 +28,7 @@ LOGO_ALT = "Oykos by Oykomed"
 # Standard closing call to action, on every issue.
 CTA_TITLE = "Inizia a risparmiare 1 ora al giorno nella tua attività pediatrica"
 CTA_SUBTITLE = (
-    "Oykos raccoglie, verifica e traduce in azioni ciò che cambia davvero per un "
+    "Oykos raccoglie, verifica e contestualizza ciò che cambia davvero per un "
     "Pediatra di Libera Scelta. Scopri come funziona."
 )
 CTA_BUTTON = "Scopri Oykos"
@@ -136,7 +136,7 @@ a.plain, a.plain:visited { text-decoration: none; }
       <img src="{{ logo_url }}" alt="{{ logo_alt }}" width="132" height="59"
            style="display:block;border:0;outline:none;width:132px;height:59px;margin:0 0 20px;">
       <p class="sans" style="margin:0 0 12px;font-size:10px;letter-spacing:2.6px;text-transform:uppercase;color:#008484;font-weight:700;">
-        Briefing operativo per PLS
+        Briefing settimanale per PLS
       </p>
       <h1 class="serif h-title" style="margin:0;font-size:30px;line-height:1.22;font-weight:400;color:#0F2B5B;letter-spacing:-0.2px;">
         {{ title }}
