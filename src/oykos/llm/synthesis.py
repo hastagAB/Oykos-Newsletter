@@ -148,8 +148,10 @@ Rules:
   steering behaviour.
 
   For a guideline or institutional document you may write a direct operational
-  sentence. Imperatives such as ricontrolla, invia, modifica, mantieni,
-  monitora and prescrivi belong here and nowhere else.
+  sentence, but it must be ATTRIBUTED to the source, not issued by us. Write
+  "AIFA indica di non utilizzare ..." or "La nota informativa raccomanda di
+  ...", never a bare "Non utilizzare ..." that reads as the newsletter
+  instructing the pediatrician.
   Never audit the reader ("Verifica se le tue pratiche sono allineate").
 
 LANGUAGE MUST MATCH THE STRENGTH OF THE EVIDENCE:

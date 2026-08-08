@@ -118,7 +118,7 @@ def test_item_without_a_headline_is_dropped() -> None:
 @pytest.mark.parametrize(
     ("kind", "label"),
     [
-        (ImplicationKind.CHANGES_PRACTICE, "Cosa cambia"),
+        (ImplicationKind.CHANGES_PRACTICE, "Indicazione della fonte"),
         (ImplicationKind.WORTH_ATTENTION, "Merita attenzione"),
         (ImplicationKind.MAY_CONSIDER, "Può essere utile considerare"),
     ],
@@ -152,11 +152,11 @@ def test_no_change_reaches_the_plain_text_part_too() -> None:
 
 def test_action_label_reaches_the_plain_text_part() -> None:
     text = render_plain_text(
-        _newsletter(_slot(ImplicationKind.CHANGES_PRACTICE, ["Ricontrolla l'anamnesi"])),
+        _newsletter(_slot(ImplicationKind.CHANGES_PRACTICE, ["AIFA indica di non utilizzare"])),
     )
 
-    assert "Cosa cambia" in text
-    assert "Ricontrolla l'anamnesi" in text
+    assert "Indicazione della fonte" in text
+    assert "AIFA indica di non utilizzare" in text
 
 
 def test_no_change_kinds_have_no_action_label() -> None:

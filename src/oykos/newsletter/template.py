@@ -440,7 +440,9 @@ SECTION_LABELS = {
 # The label reflects what the source justifies, so the section is never a
 # standing invitation to invent an action.
 IMPLICATION_LABELS = {
-    "changes_practice": "Cosa cambia",
+    # Operational content is only reachable from an institutional source, so the
+    # label attributes it rather than letting the newsletter appear to instruct.
+    "changes_practice": "Indicazione della fonte",
     "worth_attention": "Merita attenzione",
     "may_consider": "Può essere utile considerare",
 }
