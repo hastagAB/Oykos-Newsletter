@@ -71,7 +71,14 @@ For every finding give: the item title, what is wrong, the exact offending
 text, and a concrete Italian rewrite. Be specific and quote the text.
 
 verdict: "pass" only if a demanding editor would send this issue unchanged.
-"needs_work" if any item is more prescriptive than its source supports."""
+"needs_work" if any item is more prescriptive than its source supports.
+
+PRECEDENCE. The permitted conclusions listed in check 3 are canonical: the
+guidelines license them explicitly. If a sentence is one of those forms, it is
+compliant and you must not report it - not under check 3, and not under any
+other check either. Reporting a permitted form as "forced action" or "language
+vs evidence" is the same error wearing a different label. You audit against the
+guidelines; you do not overrule them."""
 
 
 class Finding(BaseModel):
