@@ -168,8 +168,17 @@ def rules_version() -> str:
     published text untouched until someone remembered to force a rewrite. That
     was missed three times. Copy now carries the fingerprint of the rules that
     wrote it, and anything stale is regenerated without being asked.
+
+    The post-processing tables are part of the fingerprint too: changing only
+    the prompt-independent cleanup left cached copy uncleaned, which is the same
+    bug wearing a different hat.
     """
-    material = SYNTHESIS_SYSTEM + "|".join(sorted(k.value for k in ImplicationKind))
+    material = (
+        SYNTHESIS_SYSTEM
+        + "|".join(sorted(k.value for k in ImplicationKind))
+        + "|".join(sorted(f"{k}={v}" for k, v in _ANGLICISMS.items()))
+        + "|".join(sorted(f"{k}={v}" for k, v in _ASCII_ACCENTS.items()))
+    )
     return hashlib.sha256(material.encode()).hexdigest()[:12]
 
 SYNTHESIS_SYSTEM = f"""You are the clinical curator of an Italian pediatric
