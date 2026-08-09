@@ -133,8 +133,32 @@ def _fix_ascii_accents(text: str) -> str:
     return _ASCII_TOKEN.sub(repair, text)
 
 
+# Asking for Italian did not stop these coming back, so they are translated.
+# Only terms with one unambiguous Italian equivalent belong here; screening and
+# follow-up are left alone because Italian clinicians use them as such.
+_ANGLICISMS = {
+    "preparedness": "preparazione clinica",
+    "awareness": "consapevolezza",
+    "burden": "carico",
+    "setting": "contesto",
+    "care pathway": "percorso di cura",
+}
+_ANGLICISM_TOKEN = re.compile(
+    r"\b(" + "|".join(re.escape(w) for w in _ANGLICISMS) + r")\b",
+    re.IGNORECASE,
+)
+
+
+def _translate_anglicisms(text: str) -> str:
+    def swap(match: re.Match[str]) -> str:
+        italian = _ANGLICISMS[match.group(0).lower()]
+        return italian.capitalize() if match.group(0)[0].isupper() else italian
+
+    return _ANGLICISM_TOKEN.sub(swap, text)
+
+
 def _clean_text(text: str) -> str:
-    return _fix_ascii_accents(_normalise_quotes(text))
+    return _translate_anglicisms(_fix_ascii_accents(_normalise_quotes(text)))
 
 
 def rules_version() -> str:
