@@ -59,6 +59,18 @@ def format_event_dates(start: date, end: date | None) -> str:
     )
 
 
+def _tidy(text: str) -> str:
+    """Crawled event text carries the source's typography; the issue keeps one."""
+    return (
+        text.replace("\u2019", "'")
+        .replace("\u2018", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+    )
+
+
 def event_view(event: Event) -> dict[str, str]:
     """Only what helps a PLS decide whether to act, never invented detail."""
     where = event.city
@@ -74,10 +86,10 @@ def event_view(event: Event) -> dict[str, str]:
         ecm = "Accreditato ECM"
 
     return {
-        "title": event.title,
+        "title": _tidy(event.title),
         "when": format_event_dates(event.start_date, event.end_date),
         "where": where,
-        "why": event.why_relevant,
+        "why": _tidy(event.why_relevant),
         "organiser": event.promoter or event.organiser,
         "ecm": ecm,
         "url": event.programme_url or event.detail_url,
@@ -151,30 +163,11 @@ a.plain, a.plain:visited { text-decoration: none; }
   <tr><td bgcolor="#008484" style="background-color:#008484;font-size:0;line-height:0;height:3px;">&nbsp;</td></tr>
 
   <!-- What is really changing -->
-  {% if tldr %}
+  {% if slots %}
   <tr>
     <td class="pad" bgcolor="#EEF6F8" style="background-color:#EEF6F8;padding:24px 40px;border-bottom:1px solid #D6E8EC;">
       <p class="sans" style="margin:0 0 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#006B6B;font-weight:700;">
         Che cosa merita attenzione questa settimana
-      </p>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        {% for line in tldr %}
-        <tr>
-          <td valign="top" style="padding:3px 10px 3px 0;font-size:14px;line-height:1.6;color:#D1427C;">&bull;</td>
-          <td valign="top" class="sans" style="padding:3px 0;font-size:14px;line-height:1.62;color:#1E293B;">{{ line }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-    </td>
-  </tr>
-  {% endif %}
-
-  <!-- In this issue -->
-  {% if slots %}
-  <tr>
-    <td class="pad" style="padding:24px 40px 20px;border-bottom:1px solid #E7E9ED;">
-      <p class="sans" style="margin:0 0 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#8B95A3;font-weight:700;">
-        In questo numero
       </p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         {% for slot in slots %}
@@ -182,8 +175,8 @@ a.plain, a.plain:visited { text-decoration: none; }
           <td valign="top" class="sans" style="padding:5px 12px 5px 0;font-size:12px;line-height:1.5;color:#008484;font-weight:700;width:22px;">
             {{ "%02d"|format(slot.position) }}
           </td>
-          <td valign="top" class="sans" style="padding:5px 0;font-size:13.5px;line-height:1.5;color:#1E293B;">
-            <a href="#item-{{ slot.position }}" class="plain" style="color:#1E293B;text-decoration:none;">{{ slot.editorial.headline_operational | truncate(78, true, '...') }}</a>
+          <td valign="top" class="sans" style="padding:5px 0;font-size:13.5px;line-height:1.55;color:#1E293B;">
+            <a href="#item-{{ slot.position }}" class="plain" style="color:#1E293B;text-decoration:none;">{{ slot.editorial.headline_operational }}</a>
             <span style="color:#94A3B8;font-size:11.5px;">&nbsp;&middot;&nbsp;{{ section_labels.get(slot.section.value, slot.section.value) }}</span>
           </td>
         </tr>

@@ -122,7 +122,9 @@ def select_events(
         event.relevance_score = score_event(event, today)
 
     eligible.sort(key=lambda e: (-e.relevance_score, e.start_date))
-    selected = eligible[:max_events]
+    # Relevance decides which events make the cut; the reader reads a diary, so
+    # what survives is shown in date order.
+    selected = sorted(eligible[:max_events], key=lambda e: e.start_date)
 
     logger.info(
         "Events: %d extracted, %d eligible, %d selected",

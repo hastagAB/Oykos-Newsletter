@@ -244,7 +244,9 @@ LANGUAGE MUST MATCH THE STRENGTH OF THE EVIDENCE:
 
 - summary: 2 to 5 lines giving what the reader needs to decide whether to go
   deeper. Specifics over adjectives: ages, doses, dates, thresholds. No filler
-  openers. Do not restate the headline or why_it_matters in other words.
+  openers. It must ADD to the blocks above, never restate them: do not repeat
+  the headline, what_emerges, why_it_matters or the implication in other words.
+  If the only thing left to say is what has already been said, write less.
 - source_note: max {SOURCE_NOTE_MAX_CHARS} characters naming what kind of source this is and
   what it does NOT let you conclude, for example "Studio osservazionale. Mostra
   associazioni, non consente indicazioni operative." Never a bare grade.

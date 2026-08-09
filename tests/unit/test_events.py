@@ -88,14 +88,17 @@ def test_explicit_audience_outranks_programme_inference() -> None:
     assert score_event(explicit, TODAY) > score_event(inferred, TODAY)
 
 
-def test_relevance_beats_timing() -> None:
-    """Ordering is relevance first, then timing."""
+def test_relevance_decides_inclusion_and_date_decides_order() -> None:
+    """Relevance picks the events; the reader still reads them as a diary."""
     soon_but_weak = _event(title="Vicino", days_ahead=2, fit=PLSFit.PROGRAMME)
     later_but_explicit = _event(title="Esplicito", days_ahead=25, fit=PLSFit.EXPLICIT)
 
     selected = select_events([soon_but_weak, later_but_explicit], TODAY)
 
-    assert [e.title for e in selected] == ["Esplicito", "Vicino"]
+    assert [e.title for e in selected] == ["Vicino", "Esplicito"]
+    # When only one slot is available, relevance is what wins it.
+    only_one = select_events([soon_but_weak, later_but_explicit], TODAY, max_events=1)
+    assert [e.title for e in only_one] == ["Esplicito"]
 
 
 # ── Publishability ────────────────────────────────────────
