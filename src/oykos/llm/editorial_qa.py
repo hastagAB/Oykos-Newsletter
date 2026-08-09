@@ -60,6 +60,12 @@ Check each item and report every violation you find:
    one?
 7. SEPARATION. Is it clear what the source states, what may be relevant, and
    what is Oykos's own reading?
+8. SUBJECT AND PREHEADER SCOPE. These cover the whole issue, so they must not
+   generalise one item's conclusion to the rest. If a single regulatory notice
+   changes practice while the other items are observational, naming the source
+   ("Nuove indicazioni AIFA su ...") is CORRECT and must not be flagged;
+   framing the issue as "cosa cambia questa settimana" is a finding, because it
+   misrepresents the items that change nothing.
 
 For every finding give: the item title, what is wrong, the exact offending
 text, and a concrete Italian rewrite. Be specific and quote the text.

@@ -5,6 +5,7 @@ from jinja2 import BaseLoader, Environment
 
 from oykos.alerts.triggers import AlertLevel
 from oykos.models.news_item import EditorialBlock
+from oykos.newsletter.template import IMPLICATION_LABELS
 
 ALERT_TEMPLATE = """<!DOCTYPE html>
 <html lang="it">
@@ -23,6 +24,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .body .why { color: #333; font-size: 14px; line-height: 1.5; }
 .body .actions { margin: 16px 0; padding-left: 20px; }
 .body .actions li { font-size: 14px; line-height: 1.6; color: #1a5276; }
+.body .actions-label { margin: 16px 0 4px; font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: #8B95A3; font-weight: 700; }
 .footer { padding: 16px 24px; font-size: 11px; color: #888; background: #f5f5f5; text-align: center; }
 </style>
 </head>
@@ -38,6 +40,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     <p class="why">{{ why_it_matters }}</p>
     {% endif %}
     {% if what_to_do %}
+    <p class="actions-label">{{ actions_label }}</p>
     <ul class="actions">
       {% for action in what_to_do %}
       <li>{{ action }}</li>
@@ -73,6 +76,9 @@ def render_alert_html(level: AlertLevel, editorial: EditorialBlock) -> str:
         headline=editorial.headline_operational,
         why_it_matters=editorial.why_it_matters,
         what_to_do=editorial.what_to_do,
+        actions_label=IMPLICATION_LABELS.get(
+            editorial.implication_kind.value, "Indicazione della fonte"
+        ),
         summary=editorial.summary,
     )
 
@@ -90,7 +96,10 @@ def render_alert_text(level: AlertLevel, editorial: EditorialBlock) -> str:
     if editorial.why_it_matters:
         lines.extend([editorial.why_it_matters, ""])
     if editorial.what_to_do:
-        lines.append("Cosa fare:")
+        lines.append(
+            IMPLICATION_LABELS.get(editorial.implication_kind.value, "Indicazione della fonte")
+            + ":",
+        )
         for action in editorial.what_to_do:
             lines.append(f"  - {action}")
         lines.append("")

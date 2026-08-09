@@ -103,6 +103,18 @@ Da evitare: *"Ex very preterm: spirometria da considerare se sintomatici."*
 Preferire: *"Ex very preterm: frequenti alterazioni spirometriche in età
 prescolare."*
 
+### 9.1 Oggetto e anteprima
+
+Oggetto e anteprima coprono l'intero numero, quindi non possono generalizzare la
+conclusione di un singolo item. Se una comunicazione istituzionale modifica la
+pratica mentre gli altri item sono osservazionali, il cambiamento va **attribuito
+alla fonte** (*"Nuove indicazioni AIFA su..."*) e non usato come cornice del
+fascicolo: *"Cosa cambia questa settimana"* travisa gli item che non cambiano
+nulla.
+
+Enforced in `newsletter/subject.py`, which tells the writer which sources change
+practice and how many items do not, and audited as check 8 in `llm/editorial_qa.py`.
+
 ## 10. Formule editoriali
 
 Da evitare come schema automatico: *Cosa cambia. Perché conta. Cosa fare

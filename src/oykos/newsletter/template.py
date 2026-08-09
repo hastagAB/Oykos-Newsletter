@@ -559,7 +559,7 @@ def render_plain_text(
         ed = slot.editorial
         lines.append(f"{slot.position}. {ed.headline_operational or 'N/A'}")
         if ed.why_it_matters:
-            lines.append(f"   In pratica: {ed.why_it_matters}")
+            lines.append(f"   {ed.why_it_matters}")
         if ed.what_to_do:
             lines.append(
                 "   "

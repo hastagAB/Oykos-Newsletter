@@ -15,6 +15,7 @@ from oykos.config import Settings
 from oykos.db.repository import NewsItemRepository, NewsletterRepository
 from oykos.db.subscribers import SubscriberRepository
 from oykos.db.tables import Base
+from oykos.llm.editorial_qa import QAReport
 from oykos.models.news_item import (
     Citation,
     Classification,
@@ -51,6 +52,8 @@ def settings() -> Settings:
         smtp_password="pw",
         recipient_emails="pls@example.it",
         base_url="https://oykos.example.it",
+        # The event pipeline crawls live sites; it has its own tests with stubs.
+        events_enabled=False,
         _env_file=None,
     )  # type: ignore[call-arg]
 
@@ -150,12 +153,16 @@ def _stub_boundaries(monkeypatch: pytest.MonkeyPatch) -> dict:
     async def fake_verify(editorial, item, client):
         return editorial
 
+    async def fake_audit(newsletter, client):
+        return QAReport(verdict="pass", summary="stub")
+
     monkeypatch.setattr(weekly, "send_newsletter", fake_send)
     monkeypatch.setattr(weekly, "send_bulk", fake_bulk)
     monkeypatch.setattr(weekly, "generate_subject_line", fake_subjects)
     monkeypatch.setattr(weekly, "attach_key_passages", fake_passages)
     monkeypatch.setattr(weekly, "synthesize_editorial", fake_synth)
     monkeypatch.setattr(weekly, "verify_claims", fake_verify)
+    monkeypatch.setattr(weekly, "audit_issue", fake_audit)
     return state
 
 

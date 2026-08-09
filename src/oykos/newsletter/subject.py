@@ -44,6 +44,12 @@ You are told what each item actually concludes. Let that govern the subject:
   fare", "ora", "subito" or any other operational framing. Name the topics and
   the kind of knowledge they add.
 - Only when an item genuinely changes practice may the subject say so.
+- When only some items change practice, attribute the change to the source that
+  issued it ("Nuove indicazioni AIFA su...") and never let it stand as the frame
+  for the whole issue. "Cosa cambia questa settimana" over one regulatory notice
+  and three observational studies misrepresents the other three. The subject and
+  the preheader are both bound by this: neither may generalise one item's
+  conclusion to the issue.
 
 Rules:
 - Write in Italian, with correct accents.
@@ -102,7 +108,7 @@ class SubjectLines:
 def _fallback(newsletter: Newsletter) -> SubjectLines:
     base = f"L'Essenziale in Pediatria - {newsletter.week}"
     preheader = (
-        f"{len(newsletter.slots)} aggiornamenti operativi, "
+        f"{len(newsletter.slots)} aggiornamenti dalla settimana, "
         f"lettura {newsletter.reading_time_minutes} minuti."
     )
     return SubjectLines(
@@ -126,18 +132,32 @@ async def generate_subject_line(
     if not top_items:
         return _fallback(newsletter)
 
-    changes_practice = any(
-        slot.editorial.implication_kind is ImplicationKind.CHANGES_PRACTICE
+    changing = [
+        slot.source_name or "la fonte"
         for slot in newsletter.slots
-    )
+        if slot.editorial.implication_kind is ImplicationKind.CHANGES_PRACTICE
+    ]
+    if not changing:
+        practice_note = (
+            "Nothing in this issue changes practice, so operational framing is "
+            "forbidden in both the subject and the preheader."
+        )
+    elif len(changing) < len(newsletter.slots):
+        practice_note = (
+            f"Only part of this issue changes practice: {', '.join(changing)}. "
+            f"The other {len(newsletter.slots) - len(changing)} item(s) do not. "
+            "If you mention the change, attribute it to that source by name. Do "
+            "not frame the issue as a whole around it."
+        )
+    else:
+        practice_note = "Every item in this issue changes practice."
 
     prompt = f"""Write the subject line for this week's briefing ({newsletter.week}).
 
 Top stories, each with what it actually concludes:
 {chr(10).join(f'- {t}' for t in top_items)}
 
-Does anything in this issue genuinely change practice? {"YES" if changes_practice else "NO"}
-{"" if changes_practice else "Because nothing changes practice, operational framing is forbidden."}
+{practice_note}
 
 The issue has {len(newsletter.slots)} items and takes about
 {newsletter.reading_time_minutes} minutes to read.
