@@ -28,8 +28,8 @@ LOGO_ALT = "Oykos by Oykomed"
 # Standard closing call to action, on every issue.
 CTA_TITLE = "Inizia a risparmiare 1 ora al giorno nella tua attività pediatrica"
 CTA_SUBTITLE = (
-    "Oykos raccoglie, verifica e contestualizza ciò che cambia davvero per un "
-    "Pediatra di Libera Scelta. Scopri come funziona."
+  "Oykos seleziona, legge, verifica e contestualizza le fonti che meritano "
+  "attenzione per il Pediatra di Libera Scelta. Scopri come funziona."
 )
 CTA_BUTTON = "Scopri Oykos"
 CTA_URL = "https://oykomed.it"
@@ -474,8 +474,8 @@ CONFIDENCE_COLORS = {
 DISCLAIMER = (
     "Informazione professionale destinata a medici. Non sostituisce le linee guida "
     "locali, la valutazione clinica del singolo caso né la consultazione della fonte "
-    "primaria. Le implicazioni operative sono redazionali e distinte da quanto "
-    "affermato dalla fonte."
+  "primaria. Le indicazioni operative sono riportate soltanto quando esplicitamente "
+  "attribuite alla fonte."
 )
 
 
