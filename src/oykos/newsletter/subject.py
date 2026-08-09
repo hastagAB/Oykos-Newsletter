@@ -65,6 +65,10 @@ Rules:
 - preheader: up to {PREHEADER_MAX_CHARS} characters anticipating what the reader
   will find, complementing the subject rather than repeating it. Same rule: do
   not promise actions the issue does not contain.
+  You cannot list every item in the space available, and you are not expected
+  to. Name the main ones, but do not word it so that the issue appears to
+  contain only those: "e altri aggiornamenti" is better than a closed list that
+  silently drops an item.
 - subject_variant_b: a second subject line taking a genuinely different angle on
   the same content. Same rules and same length limit. Not a paraphrase.
 - preheader_variant_b: a second preheader, same rules and length limit, opening

@@ -156,9 +156,17 @@ Rules:
             un'associazione tra esposizione agli schermi e disturbi del sonno."
   RIGHT:   "In eta' prescolare un tempo di schermo prolungato e l'uso serale
             dei media si associano a piu' disturbi del sonno."
+
+  STATE THE FINDING, NOT THE MEASURE. What the source instructs belongs in
+  what_to_do and must not also appear here, or the reader is told the same
+  thing twice in two blocks. Write "AIFA segnala un aumento del rischio di
+  meningioma con uso prolungato" and leave "non utilizzare in caso di
+  meningioma" to the implication.
 - why_it_matters: one or two sentences on where this can be relevant in family
   pediatrics, and for which children. Do NOT repeat what_emerges in other words
   and do NOT deduce consequences the source does not support.
+  It must not overlap the implication either: this block says WHERE the topic
+  is relevant, the implication says WHAT follows from it.
   FORBIDDEN PHRASE: never write "In pratica, questo significa". It is a filler
   formula that turns an observation into an instruction.- implication_kind: choose honestly from
   * changes_practice - a guideline or institutional instruction that really changes something
