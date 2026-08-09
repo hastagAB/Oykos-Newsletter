@@ -104,6 +104,39 @@ def _normalise_quotes(text: str) -> str:
     return text.replace("\u2019", "'").replace("\u2018", "'")
 
 
+# The model imitates whatever apostrophe style it is shown and drifts into
+# ASCII fallbacks. Unaccented Italian reads as misspelled to the audience, so it
+# is repaired here rather than asked for and hoped.
+_ASCII_ACCENTS = {
+    "e": "è", "piu": "più", "gia": "già", "cio": "ciò", "puo": "può",
+    "cosi": "così", "ne": "né", "si": "sì", "la": "là", "li": "lì",
+    "perche": "perché", "poiche": "poiché", "benche": "benché",
+    "finche": "finché", "affinche": "affinché", "cioe": "cioè",
+    "meta": "metà", "eta": "età", "citta": "città", "papa": "papà",
+}
+_ASCII_TOKEN = re.compile(r"\b([A-Za-zÀ-ÿ]+)'(?![A-Za-zÀ-ÿ])")
+
+
+def _fix_ascii_accents(text: str) -> str:
+    def repair(match: re.Match[str]) -> str:
+        word = match.group(1)
+        lowered = word.lower()
+        # Any noun in -ita' is an accented -ità; "po'" is a real elision.
+        if lowered.endswith("ita") and len(lowered) > 4:
+            fixed = word[:-3] + "ità"
+        elif lowered in _ASCII_ACCENTS:
+            fixed = _ASCII_ACCENTS[lowered]
+        else:
+            return match.group(0)
+        return fixed[0].upper() + fixed[1:] if word[0].isupper() else fixed
+
+    return _ASCII_TOKEN.sub(repair, text)
+
+
+def _clean_text(text: str) -> str:
+    return _fix_ascii_accents(_normalise_quotes(text))
+
+
 def rules_version() -> str:
     """Fingerprint of the editorial rules that produced a piece of copy.
 
@@ -131,8 +164,10 @@ Competent, collegial, contextual, sober. Never manufacture urgency. Never claim
 more certainty than the source carries.
 
 Rules:
-- Write in Italian with correct accents: perche', piu', gia', cio', eta', e'
-  must be written perch\u00e9, pi\u00f9, gi\u00e0, ci\u00f2, et\u00e0, \u00e8.
+- Write in Italian with correct accents. NEVER use the ASCII fallbacks
+  perche' piu' gia' cio' eta' e'. Always write perché, più, già, ciò, età, è,
+  qualità, criticità, attività. Unaccented Italian reads as misspelled to an
+  Italian physician.
 - Write in Italian throughout. Do not leave English terms untranslated when
   Italian has an equivalent: write "preparazione clinica" not "preparedness",
   "contesto" or "ambito" not "setting", "percorso di cura" not "care pathway".
@@ -143,7 +178,7 @@ Rules:
   the source genuinely supports one. Never put a recommendation in the title
   that the source does not contain.
   For an observational study showing an association, write
-  "Ex very preterm: frequenti alterazioni spirometriche in eta' prescolare",
+  "Ex very preterm: frequenti alterazioni spirometriche in età prescolare",
   NOT "Ex very preterm: spirometria da considerare se sintomatici".
 - what_emerges: one or two sentences saying what the source actually adds.
 
@@ -154,8 +189,8 @@ Rules:
   read line on nothing.
   WRONG:   "Questo studio trasversale su bambini di 4-5 anni osserva
             un'associazione tra esposizione agli schermi e disturbi del sonno."
-  RIGHT:   "In eta' prescolare un tempo di schermo prolungato e l'uso serale
-            dei media si associano a piu' disturbi del sonno."
+  RIGHT:   "In età prescolare un tempo di schermo prolungato e l'uso serale
+            dei media si associano a più disturbi del sonno."
 
   STATE THE FINDING, NOT THE MEASURE. What the source instructs belongs in
   what_to_do and must not also appear here, or the reader is told the same
@@ -181,8 +216,8 @@ Rules:
   IF THE SOURCE IS NOT A GUIDELINE OR AN INSTITUTIONAL DOCUMENT, the implication
   must begin with one of these exact forms and nothing else:
     "Il dato rafforza l'attenzione verso ..."
-    "Puo' essere utile tenerne conto quando ..."
-    "E' un elemento da considerare soprattutto in ..."
+    "Può essere utile tenerne conto quando ..."
+    "È un elemento da considerare soprattutto in ..."
   Anything else is dropped. In particular do NOT write "Da tenere presente
   nel ...", "Tema da tenere presente ...", "Utile ricordare ...": these steer
   behaviour without naming anyone, and an observational study does not support
@@ -201,7 +236,7 @@ LANGUAGE MUST MATCH THE STRENGTH OF THE EVIDENCE:
   their limits and population stated.
 - Observational study: describe the association and its possible relevance.
   Do not turn it into a clinical indication. Prefer wordings that keep the
-  uncertainty ("si associa a", "e' stata osservata", "potrebbe essere rilevante").
+  uncertainty ("si associa a", "è stata osservata", "potrebbe essere rilevante").
   For an observational study implication_kind may be AT MOST may_consider, and
   the title must not contain a recommendation.
 - Preliminary or single study: present it as something to know or follow.
@@ -338,8 +373,8 @@ EVIDENCE (quote these, do not invent):
     if kind in NO_ACTION_KINDS:
         actions = []
 
-    what_emerges = _normalise_quotes(resp.what_emerges.strip())
-    why_it_matters = _normalise_quotes(resp.why_it_matters.strip())
+    what_emerges = _clean_text(resp.what_emerges.strip())
+    why_it_matters = _clean_text(resp.why_it_matters.strip())
 
     # Cannot be rewritten safely without destroying the sentence, so it is
     # surfaced to the editor instead of being silently shipped.
@@ -349,16 +384,16 @@ EVIDENCE (quote these, do not invent):
         )
 
     return EditorialBlock(
-        headline_operational=_normalise_quotes(
+        headline_operational=_clean_text(
             resp.headline_operational.strip()[:HEADLINE_MAX_CHARS],
         ),
         what_emerges=what_emerges,
         why_it_matters=why_it_matters,
         implication_kind=kind,
-        what_to_do=[_normalise_quotes(a) for a in actions],
+        what_to_do=[_clean_text(a) for a in actions],
         rules_version=rules_version(),
-        summary=_normalise_quotes(resp.summary.strip()),
-        source_note=_normalise_quotes(resp.source_note.strip()[:SOURCE_NOTE_MAX_CHARS]),
+        summary=_clean_text(resp.summary.strip()),
+        source_note=_clean_text(resp.source_note.strip()[:SOURCE_NOTE_MAX_CHARS]),
         confidence=confidence,
         citations=citations,
     )
