@@ -303,7 +303,7 @@ WORKBENCH_BODY = """
   <p class="lede" style="margin-bottom:12px">{{ item.why }}</p>
 
   {% if item.actions %}
-  <p class="eyebrow">Cosa fare ora</p>
+  <p class="eyebrow">Implicazione pratica</p>
   <ol>{% for a in item.actions %}<li>{{ a }}</li>{% endfor %}</ol>
   {% endif %}
 
@@ -330,21 +330,21 @@ WORKBENCH_BODY = """
     <form method="POST" action="/review/{{ n.week }}/items/{{ item.item_id }}"
           style="margin-top:14px">
       <div class="field">
-        <label for="h-{{ item.position }}">Headline operativa (max 90 caratteri)</label>
+        <label for="h-{{ item.position }}">Titolo (max 90 caratteri)</label>
         <input type="text" id="h-{{ item.position }}" name="headline"
                maxlength="90" value="{{ item.headline }}">
       </div>
       <div class="field">
-        <label for="w-{{ item.position }}">In pratica, questo significa</label>
+        <label for="w-{{ item.position }}">Perché può contare per il PLS</label>
         <textarea id="w-{{ item.position }}" name="why_it_matters"
                   style="min-height:60px">{{ item.why }}</textarea>
       </div>
       <div class="field">
-        <label for="a-{{ item.position }}">Cosa fare (una azione per riga)</label>
+        <label for="a-{{ item.position }}">Implicazione pratica (vuoto se non esiste)</label>
         <textarea id="a-{{ item.position }}" name="what_to_do">{{ item.actions_text }}</textarea>
       </div>
       <div class="field">
-        <label for="s-{{ item.position }}">Dettaglio clinico/operativo</label>
+        <label for="s-{{ item.position }}">Dettaglio clinico</label>
         <textarea id="s-{{ item.position }}" name="summary">{{ item.summary }}</textarea>
       </div>
       <div class="field">

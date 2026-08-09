@@ -210,21 +210,43 @@ the rest. It never sends unreviewed content.
 
 ---
 
-### Geo-cap relaxation
+### Geo caps removed entirely
 
-**Blueprint**: the 70/30 Italy/foreign split may deviate by up to
-`MAX_GEO_DEVIATION` (2) slots, and only until the issue reaches
-`MIN_VIABLE_TOTAL` (10) items.
+**Blueprint**: a 70/30 Italy/foreign split on the final slots, deviating by up to
+`MAX_GEO_DEVIATION` (2) until the issue reaches `MIN_VIABLE_TOTAL` (10) items.
 
-**Shipped**: `MAX_GEO_DEVIATION`, `MIN_VIABLE_TOTAL` and `relax_geo_caps` are
-gone. `rank_and_select` enforces `max_italy` and `max_foreign` as hard caps. A
-thin week produces a shorter issue.
+**Shipped**: there is no geography quota at all. `MAX_GEO_DEVIATION`,
+`MIN_VIABLE_TOTAL`, `relax_geo_caps`, `MAX_ITALY`, `MAX_FOREIGN` and
+`ITALY_RATIO` are gone. `rank_and_select` caps only how many items may come from
+a single source (2). Italian applicability is one weighted criterion worth 10%
+inside the score.
 
-**Why**: the relaxation pass existed to pad an issue to a target length. Padding
-optimises for a number, not for the reader. A 9-item issue where every item earns
-its slot is better than a 12-item issue with three filler items, and the
-`EDITORIAL_HEADROOM` shortlist already absorbs the common case of a verification
-block shortening the issue.
+**Why**: the editorial feedback of 2026-08-07 found the bot leading with a story
+about intraosseous access in the critically ill child - clinically sound, aimed
+at a hospital team. Geography was outranking audience fit in two ways at once: a
+quota reserved slots for Italian items, and Italian applicability was applied
+twice, as a criterion AND as a multiplier on the total. Every item now competes
+on relevance to PLS practice.
+
+A thin week still produces a shorter issue. Padding optimises for a number, not
+for the reader, and the `EDITORIAL_HEADROOM` shortlist absorbs the common case of
+a verification block shortening the issue.
+
+---
+
+### Actions are optional
+
+**Blueprint and editorial guidelines v1.0**: every item ends with a single
+priority action under a "Cosa fare ora" heading.
+
+**Shipped**: an item may conclude that nothing changes. `ImplicationKind`
+carries what the source justifies, and the label follows from it. For a
+non-institutional source the conclusion must use one of the wordings listed in
+guidelines v2.0 section 10; anything else is dropped in code.
+
+**Why**: guidelines v2.0 replaced the formula "cosa cambia, perché conta, cosa
+fare adesso" precisely because it induces the writer to invent a behaviour to
+propose. See `docs/editorial-guidelines.md`.
 
 **Trigger to build**: repeated issues falling below the useful length purely
 because of the geo caps, with good foreign material sitting unused in the

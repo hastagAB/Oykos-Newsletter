@@ -24,7 +24,7 @@ Oykos is a deterministic pipeline with LLM-in-the-loop that aggregates news from
 2. **Why does it matter for a PLS?**
 3. **What changes tomorrow morning in the studio?**
 
-The system ensures no article is ever repeated across issues, enforces a 70/30 Italy/foreign ratio, and falls back to a backlog pool when fresh candidates are scarce. No issue is ever delivered without a human signing off on every item in it.
+The system ensures no article is ever repeated across issues, and ranks every candidate on relevance to PLS practice rather than on where it was published. There is no Italy/foreign quota: Italian applicability is one weighted criterion inside the score. No issue is ever delivered without a human signing off on every item in it.
 
 ---
 
@@ -51,7 +51,7 @@ Source registry (50: RSS + controlled scrape)
       v
 --- weekly: oykos compose ---------------------------------------------------
 
-  4. Rank ---------> Section quotas + 70/30 split produce a shortlist of
+  4. Rank ---------> Section quotas and a 2-per-source cap produce a shortlist of
       |              MAX_NEWSLETTER_ITEMS + 3. Nothing else is written up.
       v
   5. Synthesize ---> Evidence extraction, editorial pack, claim verification
@@ -252,7 +252,7 @@ Oykos-Newsletter/
 |   |- processing/              # Gating, scoring and ranking
 |   |   |- gates.py             # 3 selection gates + exclusion criteria
 |   |   |- scoring.py           # 7-dimension scoring, transferability, penalties
-|   |   |- ranker.py            # Section quotas, 70/30 split
+|   |   |- ranker.py            # Section quotas, 2 items per source
 |   |
 |   |- newsletter/              # Composition and rendering
 |   |   |- composer.py          # Slot selection, TL;DR, reading time

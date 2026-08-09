@@ -278,7 +278,7 @@ Oykos-Newsletter/
       gates.py                      # 3 selection gates + exclusion criteria
       scoring.py                    # 7-dimension scoring, transferability,
                                     # detect_penalties (noise penalties)
-      ranker.py                     # section quotas, hard 70/30 caps
+      ranker.py                     # section quotas, 2 items per source
     newsletter/
       composer.py                   # slots, TL;DR, reading time
       template.py                   # HTML + plain text, closing CTA

@@ -120,12 +120,12 @@ async def _latest_issue(session: AsyncSession, settings: Settings) -> Newsletter
 
 LANDING_BODY = """
 <div class="card">
-  <p class="eyebrow">Briefing operativo settimanale</p>
+  <p class="eyebrow">Briefing settimanale</p>
   <h1>{{ brand }}</h1>
   <p class="lede">
-    Per Pediatri di Libera Scelta. Ogni settimana solo ciò che è stato pubblicato in
-    quella settimana: cosa cambia, perché conta nella pratica, cosa fare ora.
-    Abbiamo già letto e verificato le fonti. Lettura 3-5 minuti.
+    Per Pediatri di Libera Scelta. Abbiamo selezionato, letto e verificato ciò che
+    è emerso questa settimana. In pochi minuti puoi capire che cosa merita davvero
+    la tua attenzione e se cambia qualcosa nella pratica.
   </p>
   <form method="POST" action="/subscribe">
     <div class="field">
