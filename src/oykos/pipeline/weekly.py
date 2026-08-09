@@ -32,6 +32,7 @@ from oykos.llm.synthesis import rules_version, synthesize_editorial
 from oykos.llm.verification import cross_source_support, verify_claims
 from oykos.models.news_item import NewsItem, Newsletter
 from oykos.models.taxonomy import Confidence, IssueStatus
+from oykos.newsletter.compliance import check_issue
 from oykos.newsletter.composer import compose_newsletter
 from oykos.newsletter.subject import generate_subject_line
 from oykos.newsletter.template import CTA_TITLE, render_html, render_plain_text
@@ -404,6 +405,17 @@ async def run_weekly_pipeline(
     report = compute_quality_report(shortlist, newsletter)
     for issue in report.issues:
         logger.warning("Quality issue: %s", issue)
+
+    # Deterministic first: same issue, same answer, no model in the loop.
+    compliance = check_issue(newsletter)
+    if compliance.passed:
+        logger.info("Guideline compliance: CONFORME (%d item)", len(newsletter.slots))
+    else:
+        logger.warning(
+            "Guideline compliance: NON CONFORME, %d violazione/i", len(compliance.failures),
+        )
+        for failure in compliance.failures:
+            logger.warning("Compliance: %s", failure)
 
     # Audit against the editorial guidelines before a human ever sees it.
     qa = await audit_issue(newsletter, client)

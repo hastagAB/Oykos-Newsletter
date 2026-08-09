@@ -23,6 +23,7 @@ from oykos.events.pipeline import events_for_issue, refresh_events
 from oykos.llm.client import LLMClient
 from oykos.llm.editorial_qa import audit_issue
 from oykos.models.taxonomy import IssueStatus
+from oykos.newsletter.compliance import check_issue
 from oykos.newsletter.template import event_view
 from oykos.observability.logging import setup_logging
 from oykos.pipeline.daily import classify_and_score, run_daily_pipeline
@@ -153,6 +154,36 @@ async def print_qa(week: str | None = None, settings: Settings | None = None) ->
         print(f"    problema: {finding.why}")  # noqa: T201
         if finding.suggested_rewrite:
             print(f"    proposta: {finding.suggested_rewrite}")  # noqa: T201
+    print()  # noqa: T201
+
+
+async def print_compliance(week: str | None = None, settings: Settings | None = None) -> None:
+    """Deterministic guideline check of an issue. Same issue, same answer."""
+    settings = settings or Settings()  # type: ignore[call-arg]
+    setup_logging(settings.log_level)
+
+    async with _session_scope(settings) as session:
+        repo = NewsletterRepository(session)
+        issue = await repo.get_by_week(week) if week else None
+        if issue is None:
+            for status in (IssueStatus.IN_REVIEW, IssueStatus.APPROVED, IssueStatus.SENT):
+                found = await repo.list_by_status(status)
+                if found:
+                    issue = found[0]
+                    break
+        if issue is None:
+            print("Nessun numero da controllare")  # noqa: T201
+            return
+
+    result = check_issue(issue)
+    verdict = "CONFORME" if result.passed else "NON CONFORME"
+    print(f"\n{issue.week}  linee guida v2.0: {verdict}")  # noqa: T201
+    print(f"  articoli: {len(issue.slots)}  violazioni: {len(result.failures)}")  # noqa: T201
+    for failure in result.failures:
+        print(f"  [X] {failure}")  # noqa: T201
+    print("\n  Da verificare a mano prima dell'invio:")  # noqa: T201
+    for check in result.human_checks:
+        print(f"  [ ] {check}")  # noqa: T201
     print()  # noqa: T201
 
 

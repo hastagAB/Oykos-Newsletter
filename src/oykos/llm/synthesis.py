@@ -59,7 +59,7 @@ _DIRECTIVE_VERB = re.compile(
 )
 
 
-def _is_directive(text: str) -> bool:
+def is_directive(text: str) -> bool:
     """Whether the text tells the reader to do something."""
     return bool(_DIRECTIVE_VERB.match(text.strip()))
 
@@ -81,7 +81,7 @@ _SANCTIONED_OPENING = re.compile(
 )
 
 
-def _is_sanctioned_conclusion(text: str) -> bool:
+def is_sanctioned_conclusion(text: str) -> bool:
     return bool(_SANCTIONED_OPENING.match(text))
 
 
@@ -95,7 +95,7 @@ _BIBLIOGRAPHIC_OPENING = re.compile(
 )
 
 
-def _opens_with_bibliography(text: str) -> bool:
+def opens_with_bibliography(text: str) -> bool:
     return bool(_BIBLIOGRAPHIC_OPENING.match(text))
 
 
@@ -357,7 +357,7 @@ EVIDENCE (quote these, do not invent):
         # presente nel follow-up" steers behaviour without addressing anyone,
         # so it slipped past the verb check on its own.
         if actions and (
-            not _is_sanctioned_conclusion(actions[0]) or _is_directive(actions[0])
+            not is_sanctioned_conclusion(actions[0]) or is_directive(actions[0])
         ):
             logger.info(
                 "Dropped unsanctioned implication on a non-institutional source: %.60s",
@@ -378,7 +378,7 @@ EVIDENCE (quote these, do not invent):
 
     # Cannot be rewritten safely without destroying the sentence, so it is
     # surfaced to the editor instead of being silently shipped.
-    if what_emerges and _opens_with_bibliography(what_emerges):
+    if what_emerges and opens_with_bibliography(what_emerges):
         logger.warning(
             "Bibliographic opening kept for review: %.70s", what_emerges,
         )

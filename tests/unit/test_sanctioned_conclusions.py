@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from oykos.llm.synthesis import _is_sanctioned_conclusion  # noqa: PLC2701
+from oykos.llm.synthesis import is_sanctioned_conclusion  # noqa: PLC2701
 
 
 @pytest.mark.parametrize(
@@ -25,7 +25,7 @@ from oykos.llm.synthesis import _is_sanctioned_conclusion  # noqa: PLC2701
     ],
 )
 def test_section_ten_conclusions_are_accepted(text: str) -> None:
-    assert _is_sanctioned_conclusion(text) is True
+    assert is_sanctioned_conclusion(text) is True
 
 
 @pytest.mark.parametrize(
@@ -41,4 +41,4 @@ def test_section_ten_conclusions_are_accepted(text: str) -> None:
 )
 def test_steering_without_an_addressee_is_still_refused(text: str) -> None:
     """The register the reviewer objected to, in impersonal form."""
-    assert _is_sanctioned_conclusion(text) is False
+    assert is_sanctioned_conclusion(text) is False

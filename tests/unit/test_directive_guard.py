@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from oykos.llm.synthesis import DIRECTIVE_DOCUMENT_TYPES, _is_directive  # noqa: PLC2701
+from oykos.llm.synthesis import DIRECTIVE_DOCUMENT_TYPES, is_directive  # noqa: PLC2701
 from oykos.models.taxonomy import DocumentType
 
 
@@ -29,7 +29,7 @@ from oykos.models.taxonomy import DocumentType
     ],
 )
 def test_directive_wording_is_recognised(text: str) -> None:
-    assert _is_directive(text) is True
+    assert is_directive(text) is True
 
 
 @pytest.mark.parametrize(
@@ -42,7 +42,7 @@ def test_directive_wording_is_recognised(text: str) -> None:
     ],
 )
 def test_descriptive_wording_is_not_directive(text: str) -> None:
-    assert _is_directive(text) is False
+    assert is_directive(text) is False
 
 
 def test_only_institutional_sources_may_direct_the_reader() -> None:
