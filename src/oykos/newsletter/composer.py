@@ -27,7 +27,9 @@ logger = logging.getLogger(__name__)
 WORDS_PER_MINUTE = 200
 MIN_READING_MINUTES = 6
 MAX_READING_MINUTES = 8
-TLDR_LINES = 3
+# The opening lists the whole issue: hiding the last item from it made the
+# summary disagree with the contents.
+TLDR_LINES = 5
 MAX_SOURCE_LINKS = 3
 
 
@@ -71,10 +73,16 @@ def _source_links(item: NewsItem) -> list[SourceLink]:
 
 
 def _tldr(slots: list[NewsletterSlot]) -> list[str]:
-    """Three lines answering 'what is really changing this week'."""
+    """The week's conclusions, one line each.
+
+    This used to reprint ``why_it_matters`` verbatim, so every reader read the
+    same paragraph twice - exactly the padding section 8 forbids. The headline
+    already states the conclusion, and repeating it here is the second reading
+    level section 4 asks for rather than duplicated prose.
+    """
     lines: list[str] = []
     for slot in slots:
-        line = slot.editorial.why_it_matters.strip()
+        line = slot.editorial.headline_operational.strip()
         if line and line not in lines:
             lines.append(line)
         if len(lines) == TLDR_LINES:
@@ -148,6 +156,7 @@ def compose_newsletter(
             " ".join(
                 [
                     item.editorial.headline_operational,
+                    item.editorial.what_emerges,
                     item.editorial.why_it_matters,
                     item.editorial.summary,
                     *item.editorial.what_to_do,

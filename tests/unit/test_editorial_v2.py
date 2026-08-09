@@ -119,8 +119,8 @@ def test_item_without_a_headline_is_dropped() -> None:
     ("kind", "label"),
     [
         (ImplicationKind.CHANGES_PRACTICE, "Indicazione della fonte"),
-        (ImplicationKind.WORTH_ATTENTION, "Merita attenzione"),
-        (ImplicationKind.MAY_CONSIDER, "Può essere utile considerare"),
+        (ImplicationKind.WORTH_ATTENTION, "Implicazione pratica"),
+        (ImplicationKind.MAY_CONSIDER, "Implicazione pratica"),
     ],
 )
 def test_action_label_matches_the_kind(kind: ImplicationKind, label: str) -> None:

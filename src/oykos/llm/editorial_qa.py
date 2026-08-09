@@ -66,6 +66,14 @@ Check each item and report every violation you find:
    ("Nuove indicazioni AIFA su ...") is CORRECT and must not be flagged;
    framing the issue as "cosa cambia questa settimana" is a finding, because it
    misrepresents the items that change nothing.
+9. BIBLIOGRAPHIC OPENING. "Cosa emerge" must open with the finding, not with the
+   kind of source. "Questo studio trasversale su ... osserva che" wastes the most
+   read line: the source type is already given under "Fonte e limiti". Flag any
+   item opening with "Questo studio", "Lo studio", "Questa revisione",
+   "L'articolo", "La ricerca".
+10. DUPLICATION. "Cosa emerge" and "Perche'" must say different things: what the
+   source shows, then where it can matter for a PLS. If one restates the other,
+   that is padding and a finding.
 
 For every finding give: the item title, what is wrong, the exact offending
 text, and a concrete Italian rewrite. Be specific and quote the text.
@@ -112,6 +120,7 @@ def _render_for_audit(newsletter: Newsletter) -> str:
             f"Tipo di fonte: {slot.source_name}\n"
             f"Implicazione dichiarata: {editorial.implication_kind.value}\n"
             f"Titolo: {editorial.headline_operational}\n"
+            f"Cosa emerge: {editorial.what_emerges}\n"
             f"Perche': {editorial.why_it_matters}\n"
             f"Implicazione pratica: "
             f"{' | '.join(editorial.what_to_do) if editorial.what_to_do else '(nessuna)'}\n"

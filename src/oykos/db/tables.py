@@ -54,6 +54,7 @@ class NewsItemRow(Base):
     # Editorial
     source_note: Mapped[str] = mapped_column(Text, default="")
     headline_operational: Mapped[str] = mapped_column(Text, default="")
+    what_emerges: Mapped[str] = mapped_column(Text, default="", server_default="")
     why_it_matters: Mapped[str] = mapped_column(Text, default="")
     what_to_do: Mapped[list[str]] = mapped_column(JSON, default=list)
     implication_kind: Mapped[str] = mapped_column(

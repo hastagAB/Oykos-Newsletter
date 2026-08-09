@@ -196,9 +196,12 @@ def test_blocked_items_never_reach_the_reader() -> None:
     assert blocked.item_id not in {slot.item_id for slot in newsletter.slots}
 
 
-def test_tldr_has_three_lines() -> None:
+def test_tldr_lists_conclusions_without_reprinting_the_body() -> None:
     newsletter = compose_newsletter(_full_candidate_pool(), WEEK)
-    assert len(newsletter.tldr) == 3
+    bodies = {slot.editorial.why_it_matters.strip() for slot in newsletter.slots}
+
+    assert newsletter.tldr
+    assert not (set(newsletter.tldr) & bodies)
 
 
 def test_reading_time_within_promised_range() -> None:
@@ -231,7 +234,7 @@ def test_html_renders_the_five_blocks() -> None:
     assert "Riduce il rischio clinico" in html                # 2 why it matters
     # 3 the implication, labelled by what the source justifies rather than by a
     # standing "Cosa fare ora" that invites an invented action.
-    assert "Merita attenzione" in html
+    assert "Implicazione pratica" in html
     assert "Dettaglio clinico e operativo" in html            # 4 detail
     assert "Fonti" in html                                    # 5 sources
 

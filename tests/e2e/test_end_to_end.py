@@ -235,7 +235,7 @@ def test_rendered_issue_has_every_blueprint_block(items, settings) -> None:
 
     assert "Che cosa merita attenzione questa settimana" in html
     # v2.0 labels the implication by what the source justifies.
-    assert "Merita attenzione" in html
+    assert "Implicazione pratica" in html
     assert "Fonti" in html
     assert "Annulla iscrizione" in html
     assert "Informazione professionale destinata a medici" in html

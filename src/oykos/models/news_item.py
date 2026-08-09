@@ -100,6 +100,9 @@ class ReviewStatus(BaseModel):
 
 class EditorialBlock(BaseModel):
     headline_operational: str = ""
+    # Section 5 keeps these apart: what the source adds, then where it can matter
+    # for a PLS. Merged into one paragraph they blur evidence into implication.
+    what_emerges: str = ""
     why_it_matters: str = ""
     what_to_do: list[str] = Field(default_factory=list)
     # What the source actually justifies. An item with no action is a valid

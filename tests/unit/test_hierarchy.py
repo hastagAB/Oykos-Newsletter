@@ -124,4 +124,4 @@ def test_every_item_keeps_its_title_and_implication() -> None:
     assert "Titolo conclusivo drug_safety" in html
     assert "Titolo conclusivo vaccinations" in html
     assert html.count("Ricontrolla i due aspetti indicati") == 2
-    assert "Merita attenzione" in html
+    assert "Implicazione pratica" in html

@@ -335,6 +335,11 @@ WORKBENCH_BODY = """
                maxlength="90" value="{{ item.headline }}">
       </div>
       <div class="field">
+        <label for="e-{{ item.position }}">Cosa emerge (apri con il dato, non con "Questo studio...")</label>
+        <textarea id="e-{{ item.position }}" name="what_emerges"
+                  style="min-height:60px">{{ item.emerges }}</textarea>
+      </div>
+      <div class="field">
         <label for="w-{{ item.position }}">Perché può contare per il PLS</label>
         <textarea id="w-{{ item.position }}" name="why_it_matters"
                   style="min-height:60px">{{ item.why }}</textarea>
@@ -406,6 +411,7 @@ def _slot_view(slot: NewsletterSlot, decision: ReviewDecision | None) -> dict[st
         "unsupported": slot.editorial.unsupported_claims,
         "note": slot.editorial.source_note,
         "headline": slot.editorial.headline_operational,
+        "emerges": slot.editorial.what_emerges,
         "why": slot.editorial.why_it_matters,
         "actions": slot.editorial.what_to_do,
         "actions_text": "\n".join(slot.editorial.what_to_do),
@@ -475,6 +481,7 @@ async def decide_item(
     decision: Annotated[str, Form()],
     headline: Annotated[str, Form()] = "",
     why_it_matters: Annotated[str, Form()] = "",
+    what_emerges: Annotated[str, Form()] = "",
     what_to_do: Annotated[str, Form()] = "",
     summary: Annotated[str, Form()] = "",
     notes: Annotated[str, Form()] = "",
@@ -502,6 +509,9 @@ async def decide_item(
             if why_it_matters.strip() and why_it_matters.strip() != slot.editorial.why_it_matters:
                 edits["why_it_matters"] = why_it_matters.strip()
                 slot.editorial.why_it_matters = why_it_matters.strip()
+            if what_emerges.strip() and what_emerges.strip() != slot.editorial.what_emerges:
+                edits["what_emerges"] = what_emerges.strip()
+                slot.editorial.what_emerges = what_emerges.strip()
             actions = [line.strip() for line in what_to_do.splitlines() if line.strip()]
             if actions and actions != slot.editorial.what_to_do:
                 edits["what_to_do"] = "\n".join(actions)

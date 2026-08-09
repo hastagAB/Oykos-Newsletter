@@ -80,6 +80,7 @@ class NewsItemRepository:
             transferability=item.scoring.transferability,
             source_note=item.editorial.source_note,
             headline_operational=item.editorial.headline_operational,
+            what_emerges=item.editorial.what_emerges,
             why_it_matters=item.editorial.why_it_matters,
             what_to_do=item.editorial.what_to_do,
             implication_kind=item.editorial.implication_kind.value,
@@ -248,6 +249,7 @@ class NewsItemRepository:
         if row:
             row.source_note = editorial.source_note
             row.headline_operational = editorial.headline_operational
+            row.what_emerges = editorial.what_emerges
             row.why_it_matters = editorial.why_it_matters
             row.what_to_do = editorial.what_to_do
             row.implication_kind = editorial.implication_kind.value
@@ -301,6 +303,7 @@ class NewsItemRepository:
             editorial=EditorialBlock(
                 source_note=row.source_note,
                 headline_operational=row.headline_operational,
+                what_emerges=row.what_emerges or "",
                 why_it_matters=row.why_it_matters,
                 what_to_do=row.what_to_do if row.what_to_do else [],
                 implication_kind=ImplicationKind(

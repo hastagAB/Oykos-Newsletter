@@ -85,6 +85,25 @@ def _is_sanctioned_conclusion(text: str) -> bool:
     return bool(_SANCTIONED_OPENING.match(text))
 
 
+# Section 6: open with the message, not with the bibliography. The source type
+# is already carried by source_note, so this only costs the most read line.
+_BIBLIOGRAPHIC_OPENING = re.compile(
+    r"^\s*(?:questo|questa|lo|la|il|un|una|nel|nello)\s+"
+    r"(?:recente\s+|nuovo\s+|nuova\s+|ampio\s+|ampia\s+)?"
+    r"(?:studio|revisione|ricerca|articolo|lavoro|analisi|indagine|documento|report)\b",
+    re.IGNORECASE,
+)
+
+
+def _opens_with_bibliography(text: str) -> bool:
+    return bool(_BIBLIOGRAPHIC_OPENING.match(text))
+
+
+def _normalise_quotes(text: str) -> str:
+    """One apostrophe shape per issue; the model mixes U+2019 with U+0027."""
+    return text.replace("\u2019", "'").replace("\u2018", "'")
+
+
 def rules_version() -> str:
     """Fingerprint of the editorial rules that produced a piece of copy.
 
@@ -114,6 +133,11 @@ more certainty than the source carries.
 Rules:
 - Write in Italian with correct accents: perche', piu', gia', cio', eta', e'
   must be written perch\u00e9, pi\u00f9, gi\u00e0, ci\u00f2, et\u00e0, \u00e8.
+- Write in Italian throughout. Do not leave English terms untranslated when
+  Italian has an equivalent: write "preparazione clinica" not "preparedness",
+  "contesto" or "ambito" not "setting", "percorso di cura" not "care pathway".
+  Keep only terms Italian clinicians genuinely use as such (screening, follow-up,
+  case report, drop-out).
 - headline_operational: max {HEADLINE_MAX_CHARS} characters. Informative before
   catchy. It must describe WHAT WE KNOW, and may carry a consequence only when
   the source genuinely supports one. Never put a recommendation in the title
@@ -121,13 +145,22 @@ Rules:
   For an observational study showing an association, write
   "Ex very preterm: frequenti alterazioni spirometriche in eta' prescolare",
   NOT "Ex very preterm: spirometria da considerare se sintomatici".
-- why_it_matters: one or two sentences. First what the source adds, then where
-  it can be relevant in family pediatrics. Do NOT deduce consequences the source
-  does not support.
+- what_emerges: one or two sentences saying what the source actually adds.
+
+  OPEN WITH THE FINDING, NEVER WITH THE BIBLIOGRAPHY. Do not begin with
+  "Questo studio ...", "Lo studio ...", "Un recente studio ...", "Questa
+  revisione ...", "L'articolo ...", "La ricerca ...". The kind of source is
+  already stated in source_note, so naming it here wastes the first and most
+  read line on nothing.
+  WRONG:   "Questo studio trasversale su bambini di 4-5 anni osserva
+            un'associazione tra esposizione agli schermi e disturbi del sonno."
+  RIGHT:   "In eta' prescolare un tempo di schermo prolungato e l'uso serale
+            dei media si associano a piu' disturbi del sonno."
+- why_it_matters: one or two sentences on where this can be relevant in family
+  pediatrics, and for which children. Do NOT repeat what_emerges in other words
+  and do NOT deduce consequences the source does not support.
   FORBIDDEN PHRASE: never write "In pratica, questo significa". It is a filler
-  formula that turns an observation into an instruction. Write what the source
-  shows, then where it may matter, in plain clinical language.
-- implication_kind: choose honestly from
+  formula that turns an observation into an instruction.- implication_kind: choose honestly from
   * changes_practice - a guideline or institutional instruction that really changes something
   * worth_attention  - consolidated evidence that reinforces attention to something
   * may_consider     - it may be useful to bear in mind in certain situations
@@ -193,6 +226,7 @@ class SynthesisCitation(BaseModel):
 
 class SynthesisResponse(BaseModel):
     headline_operational: str
+    what_emerges: str = ""
     why_it_matters: str
     implication_kind: ImplicationKind = ImplicationKind.WORTH_ATTENTION
     what_to_do: list[str] = Field(default_factory=list)
@@ -296,14 +330,27 @@ EVIDENCE (quote these, do not invent):
     if kind in NO_ACTION_KINDS:
         actions = []
 
+    what_emerges = _normalise_quotes(resp.what_emerges.strip())
+    why_it_matters = _normalise_quotes(resp.why_it_matters.strip())
+
+    # Cannot be rewritten safely without destroying the sentence, so it is
+    # surfaced to the editor instead of being silently shipped.
+    if what_emerges and _opens_with_bibliography(what_emerges):
+        logger.warning(
+            "Bibliographic opening kept for review: %.70s", what_emerges,
+        )
+
     return EditorialBlock(
-        headline_operational=resp.headline_operational.strip()[:HEADLINE_MAX_CHARS],
-        why_it_matters=resp.why_it_matters.strip(),
+        headline_operational=_normalise_quotes(
+            resp.headline_operational.strip()[:HEADLINE_MAX_CHARS],
+        ),
+        what_emerges=what_emerges,
+        why_it_matters=why_it_matters,
         implication_kind=kind,
-        what_to_do=actions,
+        what_to_do=[_normalise_quotes(a) for a in actions],
         rules_version=rules_version(),
-        summary=resp.summary.strip(),
-        source_note=resp.source_note.strip()[:SOURCE_NOTE_MAX_CHARS],
+        summary=_normalise_quotes(resp.summary.strip()),
+        source_note=_normalise_quotes(resp.source_note.strip()[:SOURCE_NOTE_MAX_CHARS]),
         confidence=confidence,
         citations=citations,
     )

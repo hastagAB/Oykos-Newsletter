@@ -225,11 +225,18 @@ a.plain, a.plain:visited { text-decoration: none; }
               {{ slot.editorial.headline_operational or "Titolo non disponibile" }}
             </h3>
 
+            {% if slot.editorial.what_emerges %}
+            <p class="sans" style="margin:0 0 14px;font-size:14.5px;line-height:1.68;color:#1F2937;">
+              {{ slot.editorial.what_emerges }}
+            </p>
+            {% endif %}
+
             {% if slot.editorial.why_it_matters %}
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 16px;">
               <tr>
                 <td width="3" bgcolor="#008484" style="background-color:#008484;font-size:0;line-height:0;width:3px;">&nbsp;</td>
                 <td class="sans" style="padding:2px 0 2px 15px;font-size:14.5px;line-height:1.68;color:#334155;">
+                  <span style="display:block;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#8B95A3;font-weight:700;margin:0 0 5px;">Perché può contare per il PLS</span>
                   {{ slot.editorial.why_it_matters }}
                 </td>
               </tr>
@@ -443,8 +450,11 @@ IMPLICATION_LABELS = {
     # Operational content is only reachable from an institutional source, so the
     # label attributes it rather than letting the newsletter appear to instruct.
     "changes_practice": "Indicazione della fonte",
-    "worth_attention": "Merita attenzione",
-    "may_consider": "Può essere utile considerare",
+    # Section 5 names this block "Implicazione pratica". Repeating the sanctioned
+    # opening in the label made every item read "Puo' essere utile considerare:
+    # Puo' essere utile tenerne conto quando ...".
+    "worth_attention": "Implicazione pratica",
+    "may_consider": "Implicazione pratica",
 }
 
 # Shown instead of an action when the honest conclusion is that nothing changes.
@@ -558,8 +568,10 @@ def render_plain_text(
 
         ed = slot.editorial
         lines.append(f"{slot.position}. {ed.headline_operational or 'N/A'}")
+        if ed.what_emerges:
+            lines.append(f"   {ed.what_emerges}")
         if ed.why_it_matters:
-            lines.append(f"   {ed.why_it_matters}")
+            lines.append(f"   Perché può contare per il PLS: {ed.why_it_matters}")
         if ed.what_to_do:
             lines.append(
                 "   "
