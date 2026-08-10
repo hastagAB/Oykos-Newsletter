@@ -34,7 +34,14 @@ BANNED_PHRASES = (
 )
 
 # Section 2: the audience is Italian. These have ordinary Italian equivalents.
-ANGLICISMS = ("preparedness", "setting", "care pathway", "awareness", "burden")
+ANGLICISMS = (
+    "preparedness",
+    "setting",
+    "care pathway",
+    "awareness",
+    "burden",
+    "gender-diverse",
+)
 
 # Unaccented Italian reads as misspelled to an Italian physician.
 ASCII_ACCENT = re.compile(

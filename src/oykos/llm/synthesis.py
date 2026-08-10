@@ -142,6 +142,7 @@ _ANGLICISMS = {
     "burden": "carico",
     "setting": "contesto",
     "care pathway": "percorso di cura",
+    "gender-diverse": "di genere diverso",
 }
 _ANGLICISM_TOKEN = re.compile(
     r"\b(" + "|".join(re.escape(w) for w in _ANGLICISMS) + r")\b",
