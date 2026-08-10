@@ -41,6 +41,10 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Regenerate editorial copy that was already written, after a rules change",
     )
+    compose.add_argument(
+        "--week",
+        help="ISO week to compose, e.g. 2026-W32. Defaults to the current week.",
+    )
     sub.add_parser("send", help="Deliver approved issues")
     sub.add_parser("run", help="Daily ingestion followed by weekly composition")
     sub.add_parser("check-smtp", help="Verify the SMTP connection without sending")
@@ -144,7 +148,12 @@ def cli() -> None:
     if args.command == "ingest":
         asyncio.run(run_daily())
     elif args.command == "compose":
-        asyncio.run(run_weekly(rewrite=getattr(args, "rewrite", False)))
+        asyncio.run(
+            run_weekly(
+                rewrite=getattr(args, "rewrite", False),
+                week=getattr(args, "week", None),
+            ),
+        )
     elif args.command == "send":
         asyncio.run(send_pending())
     else:

@@ -312,9 +312,10 @@ async def run_weekly_pipeline(
     settings: Settings,
     *,
     rewrite: bool = False,
+    week: str | None = None,
 ) -> Newsletter | None:
     """Compose, review-gate and deliver the weekly issue."""
-    week = current_week()
+    week = week or current_week()
     logger.info("=== Weekly pipeline: %s ===", week)
 
     client = LLMClient(settings)

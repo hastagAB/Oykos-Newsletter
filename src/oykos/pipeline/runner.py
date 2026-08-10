@@ -69,12 +69,17 @@ async def run_daily(settings: Settings | None = None) -> None:
     await _ping_healthcheck(settings)
 
 
-async def run_weekly(settings: Settings | None = None, *, rewrite: bool = False) -> None:
+async def run_weekly(
+    settings: Settings | None = None,
+    *,
+    rewrite: bool = False,
+    week: str | None = None,
+) -> None:
     """Weekly composition and delivery run."""
     settings = settings or Settings()  # type: ignore[call-arg]
     setup_logging(settings.log_level)
     async with _session_scope(settings) as session:
-        await run_weekly_pipeline(session, settings, rewrite=rewrite)
+        await run_weekly_pipeline(session, settings, rewrite=rewrite, week=week)
     await _ping_healthcheck(settings)
 
 
