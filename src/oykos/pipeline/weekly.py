@@ -28,7 +28,7 @@ from oykos.events.pipeline import events_for_issue, refresh_events
 from oykos.llm.client import LLMClient
 from oykos.llm.editorial_qa import audit_issue
 from oykos.llm.extraction import attach_key_passages
-from oykos.llm.synthesis import rules_version, synthesize_editorial
+from oykos.llm.synthesis import clean_editorial_text, rules_version, synthesize_editorial
 from oykos.llm.verification import cross_source_support, verify_claims
 from oykos.models.news_item import NewsItem, Newsletter
 from oykos.models.taxonomy import Confidence, IssueStatus
@@ -113,7 +113,9 @@ async def build_editorial(
             await repo.update_key_passages(str(item.item_id), item.content.key_passages)
 
             editorial = await synthesize_editorial(item, client)
-            item.editorial = await verify_claims(editorial, item, client)
+            item.editorial = clean_editorial_text(
+                await verify_claims(editorial, item, client),
+            )
 
             # Cross-source corroboration (AIFA <-> EMA, ISS <-> Ministry). A second
             # institutional source covering the same ground restores confidence that

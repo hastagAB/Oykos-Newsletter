@@ -156,7 +156,7 @@ _ANGLICISM_TOKEN = re.compile(
     re.IGNORECASE,
 )
 _GENDER_DIVERSE = re.compile(r"\bgender[-\u2010-\u2015]diverse\b", re.IGNORECASE)
-CLEANUP_RULES_VERSION = "2"
+CLEANUP_RULES_VERSION = "3"
 
 
 def _translate_anglicisms(text: str) -> str:
@@ -171,6 +171,17 @@ def _translate_anglicisms(text: str) -> str:
 
 def _clean_text(text: str) -> str:
     return _translate_anglicisms(_fix_ascii_accents(_normalise_quotes(text)))
+
+
+def clean_editorial_text(editorial: EditorialBlock) -> EditorialBlock:
+    """Apply the deterministic language rules at every editorial boundary."""
+    editorial.headline_operational = _clean_text(editorial.headline_operational)
+    editorial.what_emerges = _clean_text(editorial.what_emerges)
+    editorial.why_it_matters = _clean_text(editorial.why_it_matters)
+    editorial.what_to_do = [_clean_text(action) for action in editorial.what_to_do]
+    editorial.summary = _clean_text(editorial.summary)
+    editorial.source_note = _clean_text(editorial.source_note)
+    return editorial
 
 
 def rules_version() -> str:
