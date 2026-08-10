@@ -10,6 +10,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from oykos.llm.synthesis import clean_editorial_text
 from oykos.models.news_item import (
     IssueMetrics,
     NewsItem,
@@ -122,6 +123,7 @@ def compose_newsletter(
 
     # An issue is 12 items; an editor reads all of them. No sampling policy.
     for item, _ in selected:
+        clean_editorial_text(item.editorial)
         item.editorial.review.needs_human_review = True
         item.editorial.review.reviewer_role = ReviewerRole.MEDICAL_EDITOR.value
 
