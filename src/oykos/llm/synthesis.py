@@ -101,7 +101,14 @@ def opens_with_bibliography(text: str) -> bool:
 
 def _normalise_quotes(text: str) -> str:
     """One apostrophe shape per issue; the model mixes U+2019 with U+0027."""
-    return text.replace("\u2019", "'").replace("\u2018", "'")
+    return (
+        text.replace("\u2019", "'")
+        .replace("\u2018", "'")
+        .replace("\u2010", "-")
+        .replace("\u2011", "-")
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+    )
 
 
 # The model imitates whatever apostrophe style it is shown and drifts into
@@ -148,9 +155,13 @@ _ANGLICISM_TOKEN = re.compile(
     r"\b(" + "|".join(re.escape(w) for w in _ANGLICISMS) + r")\b",
     re.IGNORECASE,
 )
+_GENDER_DIVERSE = re.compile(r"\bgender[-\u2010-\u2015]diverse\b", re.IGNORECASE)
+CLEANUP_RULES_VERSION = "2"
 
 
 def _translate_anglicisms(text: str) -> str:
+    text = _GENDER_DIVERSE.sub("di genere diverso", text)
+
     def swap(match: re.Match[str]) -> str:
         italian = _ANGLICISMS[match.group(0).lower()]
         return italian.capitalize() if match.group(0)[0].isupper() else italian
@@ -179,6 +190,7 @@ def rules_version() -> str:
         + "|".join(sorted(k.value for k in ImplicationKind))
         + "|".join(sorted(f"{k}={v}" for k, v in _ANGLICISMS.items()))
         + "|".join(sorted(f"{k}={v}" for k, v in _ASCII_ACCENTS.items()))
+        + CLEANUP_RULES_VERSION
     )
     return hashlib.sha256(material.encode()).hexdigest()[:12]
 
